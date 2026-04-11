@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANIMKER</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f7fafc;
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --border-color: #e2e8f0;
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
+        .dark-mode {
+            --bg-primary: #1a202c;
+            --bg-secondary: #2d3748;
+            --bg-tertiary: #4a5568;
+            --text-primary: #f7fafc;
+            --text-secondary: #e2e8f0;
+            --text-muted: #a0aec0;
+            --border-color: #4a5568;
+            --shadow-color: rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .login-section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .login-card {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-card h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .login-card p {
+            margin-bottom: 30px;
+            color: var(--text-muted);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .toolbar {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .sync-status.syncing { color: #667eea; }
+        .sync-status.offline { color: #ff6b6b; }
+
+        .quick-add, .category-manager, .backup-section {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            margin-bottom: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .quick-add h3, .category-manager h3, .backup-section h3 {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s ease, background 0.3s ease;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-danger { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%); }
+        .btn-secondary { background: #718096; }
+        .btn-google { background: #4285f4; color: white; }
+        .btn-backup { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
+        .btn-movie { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
+
+        .star-rating { display: flex; gap: 2px; }
+
+        .star {
+            font-size: 20px;
+            color: var(--border-color);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .star.active { color: #ffd700; }
+        .star:hover { color: #ffed4e; }
+
+        .opening-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .opening-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .opening-chip.active {
+            background: linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%);
+            border-color: #ff6b9d;
+            color: white;
+        }
+
+        .opening-chip:hover { border-color: #ff6b9d; }
+
+        .opening-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .opening-input-group input { width: 80px; }
+
+        .category-checkbox-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .category-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid var(--border-color);
+        }
+
+        .category-checkbox.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+
+        .category-checkbox:hover { border-color: #667eea; }
+
+        .view-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .view-btn {
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .view-btn.active {
+            background: var(--bg-secondary);
+            box-shadow: 0 1px 3px var(--shadow-color);
+        }
+
+        .content-type-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .content-type-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .content-type-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .content-type-btn.active.movies {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
+        }
+
+        .search-filter { display: flex; gap: 10px; align-items: center; }
+        .search-input { width: 250px; }
+        .category-filter { width: 150px; }
+
+        .content-area {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        .category-tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .category-tab {
+            background: none;
+            border: none;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+
+        .category-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: var(--bg-secondary);
+        }
+
+        .category-tab:hover { color: var(--text-secondary); }
+
+        .anime-content { padding: 20px; }
+
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .anime-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            background: var(--bg-secondary);
+            position: relative;
+        }
+
+        .anime-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+
+        .anime-card.movie-card {
+            border-left: 4px solid #ed8936;
+        }
+
+        .anime-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .anime-info { padding: 15px; }
+
+        .anime-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .anime-progress {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .anime-rating { margin-bottom: 8px; }
+        .anime-opening { margin-bottom: 12px; }
+
+        .opening-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .anime-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .anime-category-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .movie-badge {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .anime-actions { display: flex; gap: 8px; }
+
+        .anime-list { display: none; }
+        .anime-list.active { display: block; }
+
+        .anime-list-item {
+            display: grid;
+            grid-template-columns: 60px 2fr 1fr 1fr 120px 100px;
+            gap: 15px;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+            position: relative;
+        }
+
+        .anime-list-item:hover { background: var(--bg-tertiary); }
+        .anime-list-item:last-child { border-bottom: none; }
+
+        .anime-list-item.movie-item {
+            border-left: 4px solid #ed8936;
+        }
+
+        .anime-thumb {
+            width: 50px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+        }
+
+        .anime-list-title { font-weight: 600; color: var(--text-primary); }
+        .anime-list-progress { color: var(--text-muted); font-size: 14px; }
+        .anime-list-rating { display: flex; align-items: center; gap: 5px; }
+        .anime-list-actions { display: flex; gap: 5px; }
+
+        .category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .category-tag {
+            background: var(--bg-tertiary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+        }
+
+        .category-tag .remove {
+            background: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: var(--text-primary);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .close {
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .close:hover { color: var(--text-primary); }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-display {
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border-color);
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            transition: border-color 0.3s ease;
+            color: var(--text-muted);
+        }
+
+        .file-input-wrapper:hover .file-input-display { border-color: #667eea; }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 { margin-bottom: 10px; font-size: 20px; }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            width: 60px;
+            height: 30px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle-slider {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .theme-toggle.dark .theme-toggle-slider { transform: translateX(30px); }
+
+        .backup-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .song-tag {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; gap: 15px; text-align: center; }
+            .header h1 { font-size: 1.5rem; }
+            .header-stats { gap: 15px; font-size: 0.8rem; }
+            .user-info { order: -1; }
+            .container { padding: 10px; }
+            .toolbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
+            .toolbar-section { justify-content: center; flex-wrap: wrap; }
+            .search-filter { flex-direction: column; width: 100%; }
+            .search-input, .category-filter { width: 100%; }
+            .view-toggle { justify-content: center; }
+            .content-type-toggle { justify-content: center; }
+            .form-row { grid-template-columns: 1fr; gap: 10px; }
+            .quick-add, .category-manager, .backup-section { padding: 15px; }
+            .anime-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+            .anime-card { margin: 0 5px; }
+            .anime-content { padding: 15px; }
+            .anime-list-item { grid-template-columns: 50px 1fr 80px; gap: 10px; padding: 10px; }
+            .anime-list-item .anime-list-progress, .anime-list-item .anime-list-rating { display: none; }
+            .category-tabs { padding: 0 10px; }
+            .category-tab { padding: 12px 15px; font-size: 13px; }
+            .modal-content { width: 95%; padding: 20px; margin: 10px; }
+            .btn { padding: 12px 16px; font-size: 14px; }
+            .btn-sm { padding: 8px 12px; font-size: 12px; }
+            .anime-actions { flex-direction: column; gap: 5px; }
+            .anime-actions .btn { width: 100%; justify-content: center; }
+            .backup-buttons { flex-direction: column; }
+            .backup-buttons .btn { width: 100%; justify-content: center; }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.3rem; }
+            .anime-grid { grid-template-columns: 1fr; gap: 10px; }
+            .anime-card { margin: 0; }
+            .container { padding: 5px; }
+            .toolbar, .quick-add, .category-manager, .backup-section { margin-bottom: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-section" id="loginSection">
+        <div class="login-card">
+            <h2>ANIMKER</h2>
+            <p>Inicia sesion para sincronizar tus animes y peliculas entre dispositivos</p>
+            <button class="btn btn-google" onclick="signInWithGoogle()">
+                Iniciar sesion con Google
+            </button>
+            <p style="margin-top: 20px; font-size: 12px; color: #a0aec0;">
+                Tus datos se sincronizaran automaticamente en todos tus dispositivos
+            </p>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="header-content">
+            <h1>ANIMKER</h1>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalAnimes">0</div>
+                    <div>Animes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalMovies">0</div>
+                    <div>Peliculas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCategories">0</div>
+                    <div>Categorias</div>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()">
+                    <div class="theme-toggle-slider">L</div>
+                </div>
+                <img id="userAvatar" class="user-avatar" src="/placeholder.svg" alt="Usuario">
+                <span id="userName"></span>
+                <button class="btn btn-sm btn-secondary" onclick="signOut()">Salir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <div class="content-type-toggle">
+                    <button class="content-type-btn active" id="btnAnimes" onclick="switchContentType('animes')">Animes</button>
+                    <button class="content-type-btn" id="btnMovies" onclick="switchContentType('movies')">Peliculas</button>
+                </div>
+                <div class="search-filter">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Buscar...">
+                    <select id="categoryFilter" class="category-filter">
+                        <option value="">Todas las categorias</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="toolbar-section">
+                <div class="sync-status" id="syncStatus">
+                    <span class="spinner" style="display: none;"></span>
+                    <span id="syncText">Sincronizado</span>
+                </div>
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="switchView('grid')">Tarjetas</button>
+                    <button class="view-btn" onclick="switchView('list')">Lista</button>
+                </div>
+                <button class="btn btn-sm" onclick="toggleCategoryManager()">Categorias</button>
+                <button class="btn btn-sm btn-backup" onclick="toggleBackupSection()">Backup</button>
+                <button class="btn btn-sm" id="btnAddAnime" onclick="toggleQuickAdd()">+ Anime</button>
+                <button class="btn btn-sm btn-movie" id="btnAddMovie" onclick="toggleQuickAddMovie()">+ Pelicula</button>
+            </div>
+        </div>
+
+        <div class="backup-section" id="backupSection" style="display: none;">
+            <h3>Copia de Seguridad</h3>
+            <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 14px;">
+                Exporta tus datos para guardarlos o importa una copia de seguridad anterior.
+            </p>
+            <div class="backup-buttons">
+                <button class="btn btn-backup" onclick="exportBackup()">Exportar Datos</button>
+                <div class="file-input-wrapper" style="display: inline-block;">
+                    <input type="file" id="importBackupFile" accept=".json" onchange="importBackup(event)">
+                    <button class="btn btn-secondary">Importar Datos</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-manager" id="categoryManager" style="display: none;">
+            <h3>Gestionar Categorias</h3>
+            <p style="margin-bottom: 10px; color: var(--text-muted); font-size: 13px;">Las categorias se comparten entre animes y peliculas.</p>
+            <div class="form-row" style="grid-template-columns: 1fr auto;">
+                <input type="text" id="newCategory" placeholder="Nueva categoria...">
+                <button class="btn" onclick="addCategory()">Anadir</button>
+            </div>
+            <div class="category-list" id="categoryList"></div>
+        </div>
+
+        <!-- Add Anime Form -->
+        <div class="quick-add" id="quickAdd" style="display: none;">
+            <h3>Anadir Nuevo Anime</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="animeName">Nombre del Anime</label>
+                    <input type="text" id="animeName" placeholder="Nombre del anime">
+                </div>
+                <div class="form-group">
+                    <label>Temporada</label>
+                    <input type="number" id="animeSeason" placeholder="1" min="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Episodio</label>
+                    <input type="number" id="animeEpisode" placeholder="1" min="0" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Valoracion</label>
+                    <div class="star-rating" id="newAnimeRating">
+                        <span class="star" data-rating="1">&#9733;</span>
+                        <span class="star" data-rating="2">&#9733;</span>
+                        <span class="star" data-rating="3">&#9733;</span>
+                        <span class="star" data-rating="4">&#9733;</span>
+                        <span class="star" data-rating="5">&#9733;</span>
+                    </div>
+                </div>
+                <button class="btn" onclick="addAnime()" id="addAnimeBtn">Anadir</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Categorias (selecciona una o mas)</label>
+                <div class="category-checkbox-list" id="newAnimeCategoryList"></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Openings favoritos (por temporada)</label>
+                <div class="opening-input-group">
+                    <input type="number" id="newOpeningNumber" placeholder="T#" min="1" max="99">
+                    <button class="btn btn-sm" onclick="addOpeningToNew()">Anadir Temporada</button>
+                </div>
+                <div class="opening-selector" id="newAnimeOpenings"></div>
+                <small style="color: var(--text-muted);">Escribe el numero de temporada y haz clic en "Anadir". Puedes anadir tantas como quieras.</small>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="animeImage">Imagen del Anime (Opcional)</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="animeImage" accept="image/*">
+                    <div class="file-input-display">
+                        <p>Haz clic para seleccionar una imagen</p>
+                    </div>
+                </div>
+                <img id="imagePreview" class="image-preview" style="display: none;">
+            </div>
+        </div>
+
+        <!-- Add Movie Form -->
+        <div class="quick-add" id="quickAddMovie" style="display: none;">
+            <h3>Anadir Nueva Pelicula</h3>
+            <div class="form-row" style="grid-template-columns: 2fr 1fr auto;">
+                <div class="form-group">
+                    <label for="movieName">Nombre de la Pelicula</label>
+                    <input type="text" id="movieName" placeholder="Nombre de la pelicula">
+                </div>
+                <div class="form-group">
+                    <label>Valoracion</label>
+                    <div class="star-rating" id="newMovieRating">
+                        <span class="star" data-rating="1">&#9733;</span>
+                        <span class="star" data-rating="2">&#9733;</span>
+                        <span class="star" data-rating="3">&#9733;</span>
+                        <span class="star" data-rating="4">&#9733;</span>
+                        <span class="star" data-rating="5">&#9733;</span>
+                    </div>
+                </div>
+                <button class="btn btn-movie" onclick="addMovie()" id="addMovieBtn">Anadir</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Categorias (selecciona una o mas)</label>
+                <div class="category-checkbox-list" id="newMovieCategoryList"></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="movieSong">Cancion favorita (Opcional)</label>
+                <input type="text" id="movieSong" placeholder="Nombre de la cancion que te gusta de la pelicula">
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="movieImage">Imagen de la Pelicula (Opcional)</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="movieImage" accept="image/*">
+                    <div class="file-input-display">
+                        <p>Haz clic para seleccionar una imagen</p>
+                    </div>
+                </div>
+                <img id="movieImagePreview" class="image-preview" style="display: none;">
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="category-tabs" id="categoryTabs"></div>
+            <div class="anime-content">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    Cargando...
+                </div>
+                <div class="anime-grid" id="animeGrid" style="display: none;"></div>
+                <div class="anime-list" id="animeList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Anime Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Anime</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="editAnimeName">Nombre del Anime</label>
+                <input type="text" id="editAnimeName">
+            </div>
+            
+            <div class="form-group">
+                <label>Categorias</label>
+                <div class="category-checkbox-list" id="editAnimeCategoryList"></div>
+            </div>
+
+            <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group">
+                    <label for="editAnimeSeason">Temporada</label>
+                    <input type="number" id="editAnimeSeason" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="editAnimeEpisode">Episodio</label>
+                    <input type="number" id="editAnimeEpisode" min="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Valoracion</label>
+                <div class="star-rating" id="editAnimeRating">
+                    <span class="star" data-rating="1">&#9733;</span>
+                    <span class="star" data-rating="2">&#9733;</span>
+                    <span class="star" data-rating="3">&#9733;</span>
+                    <span class="star" data-rating="4">&#9733;</span>
+                    <span class="star" data-rating="5">&#9733;</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Openings favoritos (por temporada)</label>
+                <div class="opening-input-group">
+                    <input type="number" id="editOpeningNumber" placeholder="T#" min="1" max="99">
+                    <button class="btn btn-sm" onclick="addOpeningToEdit()">Anadir Temporada</button>
+                </div>
+                <div class="opening-selector" id="editAnimeOpenings"></div>
+                <small style="color: var(--text-muted);">Haz clic en una temporada para eliminarla</small>
+            </div>
+
+            <div class="form-group">
+                <label for="editAnimeImage">Cambiar Imagen</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="editAnimeImage" accept="image/*">
+                    <div class="file-input-display">
+                        <p>Haz clic para cambiar la imagen</p>
+                    </div>
+                </div>
+                <img id="editImagePreview" class="image-preview" style="display: none;">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="saveAnimeEdit()" id="saveEditBtn">Guardar Cambios</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Movie Modal -->
+    <div id="editMovieModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Pelicula</h3>
+                <span class="close" onclick="closeEditMovieModal()">&times;</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="editMovieName">Nombre de la Pelicula</label>
+                <input type="text" id="editMovieName">
+            </div>
+            
+            <div class="form-group">
+                <label>Categorias</label>
+                <div class="category-checkbox-list" id="editMovieCategoryList"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Valoracion</label>
+                <div class="star-rating" id="editMovieRating">
+                    <span class="star" data-rating="1">&#9733;</span>
+                    <span class="star" data-rating="2">&#9733;</span>
+                    <span class="star" data-rating="3">&#9733;</span>
+                    <span class="star" data-rating="4">&#9733;</span>
+                    <span class="star" data-rating="5">&#9733;</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="editMovieSong">Cancion favorita</label>
+                <input type="text" id="editMovieSong" placeholder="Nombre de la cancion">
+            </div>
+
+            <div class="form-group">
+                <label for="editMovieImage">Cambiar Imagen</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="editMovieImage" accept="image/*">
+                    <div class="file-input-display">
+                        <p>Haz clic para cambiar la imagen</p>
+                    </div>
+                </div>
+                <img id="editMovieImagePreview" class="image-preview" style="display: none;">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-movie" onclick="saveMovieEdit()" id="saveMovieEditBtn">Guardar Cambios</button>
+                <button class="btn btn-secondary" onclick="closeEditMovieModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDcDE85PgFjFZZEqT258trf166ECX-FRgI",
+            authDomain: "animker-13816.firebaseapp.com",
+            databaseURL: "https://animker-13816-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "animker-13816",
+            storageBucket: "animker-13816.firebasestorage.app",
+            messagingSenderId: "1011665882273",
+            appId: "1:1011665882273:web:9fca86c290d66aeb9874e0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let categories = [], animes = [], movies = [], currentUser = null;
+        let currentRating = 0, editRating = 0, movieRating = 0, editMovieRating = 0;
+        let currentEditId = null, currentEditMovieId = null;
+        let newAnimeImage = null, editAnimeImage = null, newMovieImage = null, editMovieImage = null;
+        let currentView = 'grid', currentCategory = 'all', searchTerm = '', isOnline = navigator.onLine;
+        let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
+        let currentOpenings = [], editOpenings = [];
+        let selectedCategories = [], editSelectedCategories = [];
+        let movieSelectedCategories = [], editMovieSelectedCategories = [];
+        let isDarkMode = false;
+        let currentContentType = 'animes';
+
+        window.signInWithGoogle = signInWithGoogle;
+        window.signOut = signOut;
+        window.addCategory = addCategory;
+        window.removeCategory = removeCategory;
+        window.addAnime = addAnime;
+        window.addMovie = addMovie;
+        window.editAnime = editAnime;
+        window.editMovie = editMovie;
+        window.saveAnimeEdit = saveAnimeEdit;
+        window.saveMovieEdit = saveMovieEdit;
+        window.deleteAnime = deleteAnime;
+        window.deleteMovie = deleteMovie;
+        window.closeEditModal = closeEditModal;
+        window.closeEditMovieModal = closeEditMovieModal;
+        window.toggleCategoryManager = toggleCategoryManager;
+        window.toggleQuickAdd = toggleQuickAdd;
+        window.toggleQuickAddMovie = toggleQuickAddMovie;
+        window.toggleBackupSection = toggleBackupSection;
+        window.switchView = switchView;
+        window.switchContentType = switchContentType;
+        window.selectCategory = selectCategory;
+        window.toggleDarkMode = toggleDarkMode;
+        window.exportBackup = exportBackup;
+        window.importBackup = importBackup;
+        window.addOpeningToNew = addOpeningToNew;
+        window.addOpeningToEdit = addOpeningToEdit;
+        window.removeOpening = removeOpening;
+        window.toggleCategorySelection = toggleCategorySelection;
+
+        function loadThemePreference() {
+            const savedTheme = localStorage.getItem('animker-theme');
+            if (savedTheme === 'dark') {
+                isDarkMode = true;
+                document.body.classList.add('dark-mode');
+                document.getElementById('themeToggle').classList.add('dark');
+                document.querySelector('.theme-toggle-slider').textContent = 'D';
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const toggle = document.getElementById('themeToggle');
+            const slider = document.querySelector('.theme-toggle-slider');
+            
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                toggle.classList.add('dark');
+                slider.textContent = 'D';
+                localStorage.setItem('animker-theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                toggle.classList.remove('dark');
+                slider.textContent = 'L';
+                localStorage.setItem('animker-theme', 'light');
+            }
+        }
+
+        loadThemePreference();
+
+        window.addEventListener('online', () => { isOnline = true; updateSyncStatus('Sincronizando...', 'syncing'); enableNetwork(db); });
+        window.addEventListener('offline', () => { isOnline = false; updateSyncStatus('Sin conexion', 'offline'); disableNetwork(db); });
+
+        function signInWithGoogle() {
+            signInWithPopup(auth, provider).then((result) => console.log('Usuario autenticado:', result.user))
+                .catch((error) => { console.error('Error de autenticacion:', error); alert('Error al iniciar sesion.'); });
+        }
+
+        function signOut() {
+            firebaseSignOut(auth).then(() => console.log('Usuario desconectado')).catch((error) => console.error('Error al cerrar sesion:', error));
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('userName').textContent = user.displayName;
+                document.getElementById('userAvatar').src = user.photoURL;
+                setupEventListeners();
+                loadUserData();
+            } else {
+                currentUser = null;
+                document.getElementById('loginSection').style.display = 'flex';
+                if (unsubscribeAnimes) unsubscribeAnimes();
+                if (unsubscribeCategories) unsubscribeCategories();
+                if (unsubscribeMovies) unsubscribeMovies();
+            }
+        });
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            updateSyncStatus('Cargando...', 'syncing');
+
+            try {
+                const categoriesRef = collection(db, 'users', currentUser.uid, 'categories');
+                unsubscribeCategories = onSnapshot(categoriesRef, (snapshot) => {
+                    categories = [];
+                    snapshot.forEach((doc) => categories.push(doc.data().name));
+                    updateCategorySelects(); renderCategories(); renderCategoryTabs(); updateCategoryCheckboxes(); updateStats();
+                });
+
+                const animesRef = collection(db, 'users', currentUser.uid, 'animes');
+                unsubscribeAnimes = onSnapshot(animesRef, (snapshot) => {
+                    animes = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        if (data.category && !data.categories) data.categories = [data.category];
+                        animes.push({ id: doc.id, ...data });
+                    });
+                    renderCategoryTabs(); renderContent(); updateStats(); updateSyncStatus('Sincronizado', '');
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    showContent();
+                });
+
+                const moviesRef = collection(db, 'users', currentUser.uid, 'movies');
+                unsubscribeMovies = onSnapshot(moviesRef, (snapshot) => {
+                    movies = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        if (data.category && !data.categories) data.categories = [data.category];
+                        movies.push({ id: doc.id, ...data });
+                    });
+                    renderCategoryTabs(); renderContent(); updateStats();
+                });
+            } catch (error) { console.error('Error cargando datos:', error); updateSyncStatus('Error de sincronizacion', 'offline'); }
+        }
+
+        function showContent() {
+            if (currentView === 'grid') { 
+                document.getElementById('animeGrid').style.display = 'grid'; 
+                document.getElementById('animeList').classList.remove('active'); 
+            } else { 
+                document.getElementById('animeGrid').style.display = 'none'; 
+                document.getElementById('animeList').classList.add('active'); 
+            }
+        }
+
+        async function saveCategoriesToFirebase() {
+            if (!currentUser) return;
+            try {
+                updateSyncStatus('Guardando categorias...', 'syncing');
+                const categoriesRef = collection(db, 'users', currentUser.uid, 'categories');
+                const snapshot = await getDocs(categoriesRef);
+                const existingCategories = new Set();
+                snapshot.forEach(doc => existingCategories.add(doc.id));
+
+                const deletePromises = [];
+                existingCategories.forEach(categoryId => { if (!categories.includes(categoryId)) deletePromises.push(deleteDoc(doc(categoriesRef, categoryId))); });
+                await Promise.all(deletePromises);
+
+                const addPromises = categories.map(category => setDoc(doc(categoriesRef, category), { name: category, createdAt: new Date().toISOString() }));
+                await Promise.all(addPromises);
+                updateSyncStatus('Categorias guardadas', '');
+            } catch (error) { console.error('Error guardando categorias:', error); updateSyncStatus('Error guardando categorias', 'offline'); }
+        }
+
+        function updateSyncStatus(text, className) {
+            const syncStatus = document.getElementById('syncStatus');
+            const syncText = document.getElementById('syncText');
+            const spinner = syncStatus.querySelector('.spinner');
+            syncText.textContent = text;
+            syncStatus.className = `sync-status ${className}`;
+            spinner.style.display = className === 'syncing' ? 'block' : 'none';
+        }
+
+        function setupEventListeners() {
+            document.querySelectorAll('#newAnimeRating .star').forEach(star => {
+                star.addEventListener('click', function() { currentRating = parseInt(this.dataset.rating); updateStarDisplay('#newAnimeRating', currentRating); });
+            });
+            document.querySelectorAll('#editAnimeRating .star').forEach(star => {
+                star.addEventListener('click', function() { editRating = parseInt(this.dataset.rating); updateStarDisplay('#editAnimeRating', editRating); });
+            });
+            document.querySelectorAll('#newMovieRating .star').forEach(star => {
+                star.addEventListener('click', function() { movieRating = parseInt(this.dataset.rating); updateStarDisplay('#newMovieRating', movieRating); });
+            });
+            document.querySelectorAll('#editMovieRating .star').forEach(star => {
+                star.addEventListener('click', function() { editMovieRating = parseInt(this.dataset.rating); updateStarDisplay('#editMovieRating', editMovieRating); });
+            });
+            document.getElementById('animeImage').addEventListener('change', function(e) { handleImagePreview(e, 'imagePreview', (imageData) => { newAnimeImage = imageData; }); });
+            document.getElementById('editAnimeImage').addEventListener('change', function(e) { handleImagePreview(e, 'editImagePreview', (imageData) => { editAnimeImage = imageData; }); });
+            document.getElementById('movieImage').addEventListener('change', function(e) { handleImagePreview(e, 'movieImagePreview', (imageData) => { newMovieImage = imageData; }); });
+            document.getElementById('editMovieImage').addEventListener('change', function(e) { handleImagePreview(e, 'editMovieImagePreview', (imageData) => { editMovieImage = imageData; }); });
+            document.getElementById('searchInput').addEventListener('input', function(e) { searchTerm = e.target.value.toLowerCase(); renderContent(); });
+            document.getElementById('categoryFilter').addEventListener('change', function(e) { currentCategory = e.target.value || 'all'; renderContent(); });
+            document.getElementById('newCategory').addEventListener('keypress', function(e) { if (e.key === 'Enter') addCategory(); });
+            document.getElementById('newOpeningNumber').addEventListener('keypress', function(e) { if (e.key === 'Enter') addOpeningToNew(); });
+            document.getElementById('editOpeningNumber').addEventListener('keypress', function(e) { if (e.key === 'Enter') addOpeningToEdit(); });
+        }
+
+        function handleImagePreview(event, previewId, callback) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { const preview = document.getElementById(previewId); preview.src = e.target.result; preview.style.display = 'block'; callback(e.target.result); };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateStarDisplay(containerId, rating) {
+            document.querySelectorAll(`${containerId} .star`).forEach((star, index) => { star.classList.toggle('active', index < rating); });
+        }
+
+        function addOpeningToNew() {
+            const input = document.getElementById('newOpeningNumber');
+            const season = parseInt(input.value);
+            if (season && season > 0 && !currentOpenings.includes(season)) {
+                currentOpenings.push(season);
+                currentOpenings.sort((a, b) => a - b);
+                renderOpeningsDisplay('newAnimeOpenings', currentOpenings, 'new');
+                input.value = '';
+            }
+        }
+
+        function addOpeningToEdit() {
+            const input = document.getElementById('editOpeningNumber');
+            const season = parseInt(input.value);
+            if (season && season > 0 && !editOpenings.includes(season)) {
+                editOpenings.push(season);
+                editOpenings.sort((a, b) => a - b);
+                renderOpeningsDisplay('editAnimeOpenings', editOpenings, 'edit');
+                input.value = '';
+            }
+        }
+
+        function removeOpening(type, season) {
+            if (type === 'new') { currentOpenings = currentOpenings.filter(s => s !== season); renderOpeningsDisplay('newAnimeOpenings', currentOpenings, 'new'); }
+            else { editOpenings = editOpenings.filter(s => s !== season); renderOpeningsDisplay('editAnimeOpenings', editOpenings, 'edit'); }
+        }
+
+        function renderOpeningsDisplay(containerId, openings, type) {
+            document.getElementById(containerId).innerHTML = openings.map(season => `<div class="opening-chip active" onclick="removeOpening('${type}', ${season})">T${season} * <span style="margin-left: 4px;">x</span></div>`).join('');
+        }
+
+        function updateCategoryCheckboxes() {
+            renderCategoryCheckboxList('newAnimeCategoryList', selectedCategories, 'new');
+            renderCategoryCheckboxList('editAnimeCategoryList', editSelectedCategories, 'edit');
+            renderCategoryCheckboxList('newMovieCategoryList', movieSelectedCategories, 'movie');
+            renderCategoryCheckboxList('editMovieCategoryList', editMovieSelectedCategories, 'editMovie');
+        }
+
+        function renderCategoryCheckboxList(containerId, selected, type) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = categories.map(category => `<div class="category-checkbox ${selected.includes(category) ? 'selected' : ''}" onclick="toggleCategorySelection('${type}', '${category}')">${category}</div>`).join('');
+        }
+
+        function toggleCategorySelection(type, category) {
+            if (type === 'new') {
+                if (selectedCategories.includes(category)) selectedCategories = selectedCategories.filter(c => c !== category);
+                else selectedCategories.push(category);
+                renderCategoryCheckboxList('newAnimeCategoryList', selectedCategories, 'new');
+            } else if (type === 'edit') {
+                if (editSelectedCategories.includes(category)) editSelectedCategories = editSelectedCategories.filter(c => c !== category);
+                else editSelectedCategories.push(category);
+                renderCategoryCheckboxList('editAnimeCategoryList', editSelectedCategories, 'edit');
+            } else if (type === 'movie') {
+                if (movieSelectedCategories.includes(category)) movieSelectedCategories = movieSelectedCategories.filter(c => c !== category);
+                else movieSelectedCategories.push(category);
+                renderCategoryCheckboxList('newMovieCategoryList', movieSelectedCategories, 'movie');
+            } else if (type === 'editMovie') {
+                if (editMovieSelectedCategories.includes(category)) editMovieSelectedCategories = editMovieSelectedCategories.filter(c => c !== category);
+                else editMovieSelectedCategories.push(category);
+                renderCategoryCheckboxList('editMovieCategoryList', editMovieSelectedCategories, 'editMovie');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalAnimes').textContent = animes.length;
+            document.getElementById('totalMovies').textContent = movies.length;
+            document.getElementById('totalCategories').textContent = categories.length;
+        }
+
+        function toggleCategoryManager() { const manager = document.getElementById('categoryManager'); manager.style.display = manager.style.display === 'none' ? 'block' : 'none'; }
+        function toggleQuickAdd() { 
+            const quickAdd = document.getElementById('quickAdd'); 
+            const quickAddMovie = document.getElementById('quickAddMovie');
+            quickAddMovie.style.display = 'none';
+            quickAdd.style.display = quickAdd.style.display === 'none' ? 'block' : 'none'; 
+            if (quickAdd.style.display === 'block') updateCategoryCheckboxes(); 
+        }
+        function toggleQuickAddMovie() { 
+            const quickAdd = document.getElementById('quickAdd'); 
+            const quickAddMovie = document.getElementById('quickAddMovie');
+            quickAdd.style.display = 'none';
+            quickAddMovie.style.display = quickAddMovie.style.display === 'none' ? 'block' : 'none'; 
+            if (quickAddMovie.style.display === 'block') updateCategoryCheckboxes(); 
+        }
+        function toggleBackupSection() { const backup = document.getElementById('backupSection'); backup.style.display = backup.style.display === 'none' ? 'block' : 'none'; }
+
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            showContent();
+            renderContent();
+        }
+
+        function switchContentType(type) {
+            currentContentType = type;
+            document.getElementById('btnAnimes').classList.toggle('active', type === 'animes');
+            document.getElementById('btnMovies').classList.toggle('active', type === 'movies');
+            document.getElementById('btnMovies').classList.toggle('movies', type === 'movies');
+            document.getElementById('searchInput').placeholder = type === 'animes' ? 'Buscar animes...' : 'Buscar peliculas...';
+            renderCategoryTabs();
+            renderContent();
+        }
+
+        async function addCategory() {
+            const input = document.getElementById('newCategory');
+            const categoryName = input.value.trim();
+            if (categoryName && !categories.includes(categoryName)) {
+                categories.push(categoryName);
+                input.value = '';
+                updateCategorySelects(); renderCategories(); renderCategoryTabs(); updateCategoryCheckboxes(); updateStats();
+                try { await saveCategoriesToFirebase(); updateSyncStatus('Categoria anadida', ''); }
+                catch (error) { console.error('Error anadiendo categoria:', error); updateSyncStatus('Error guardando', 'offline'); categories = categories.filter(cat => cat !== categoryName); updateCategorySelects(); renderCategories(); renderCategoryTabs(); updateCategoryCheckboxes(); updateStats(); }
+            } else if (categories.includes(categoryName)) alert('Esta categoria ya existe');
+        }
+
+        async function removeCategory(categoryName) {
+            if (confirm(`Eliminar la categoria "${categoryName}"? Los animes/peliculas que solo tengan esta categoria seran eliminados.`)) {
+                const originalCategories = [...categories], originalAnimes = [...animes], originalMovies = [...movies];
+                categories = categories.filter(cat => cat !== categoryName);
+                
+                const animesToDelete = animes.filter(anime => { const cats = anime.categories || [anime.category]; return cats.length === 1 && cats[0] === categoryName; });
+                animes = animes.filter(anime => { const cats = anime.categories || [anime.category]; return !(cats.length === 1 && cats[0] === categoryName); });
+                animes = animes.map(anime => { const cats = anime.categories || [anime.category]; return { ...anime, categories: cats.filter(c => c !== categoryName) }; });
+                
+                const moviesToDelete = movies.filter(movie => { const cats = movie.categories || [movie.category]; return cats.length === 1 && cats[0] === categoryName; });
+                movies = movies.filter(movie => { const cats = movie.categories || [movie.category]; return !(cats.length === 1 && cats[0] === categoryName); });
+                movies = movies.map(movie => { const cats = movie.categories || [movie.category]; return { ...movie, categories: cats.filter(c => c !== categoryName) }; });
+                
+                updateCategorySelects(); renderCategories(); renderCategoryTabs(); updateCategoryCheckboxes(); renderContent(); updateStats();
+                try {
+                    updateSyncStatus('Eliminando...', 'syncing');
+                    await Promise.all(animesToDelete.map(anime => deleteDoc(doc(db, 'users', currentUser.uid, 'animes', anime.id))));
+                    await Promise.all(moviesToDelete.map(movie => deleteDoc(doc(db, 'users', currentUser.uid, 'movies', movie.id))));
+                    await saveCategoriesToFirebase();
+                    updateSyncStatus('Categoria eliminada', '');
+                } catch (error) { console.error('Error eliminando categoria:', error); updateSyncStatus('Error eliminando', 'offline'); categories = originalCategories; animes = originalAnimes; movies = originalMovies; updateCategorySelects(); renderCategories(); renderCategoryTabs(); updateCategoryCheckboxes(); renderContent(); updateStats(); }
+            }
+        }
+
+        function updateCategorySelects() {
+            const select = document.getElementById('categoryFilter');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Todas las categorias</option>';
+            categories.forEach(category => { const option = document.createElement('option'); option.value = category; option.textContent = category; select.appendChild(option); });
+            select.value = currentValue;
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoryList');
+            container.innerHTML = '';
+            categories.forEach(category => { const tag = document.createElement('div'); tag.className = 'category-tag'; tag.innerHTML = `${category}<span class="remove" onclick="removeCategory('${category}')" title="Eliminar categoria">x</span>`; container.appendChild(tag); });
+        }
+
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            container.innerHTML = '';
+            const items = currentContentType === 'animes' ? animes : movies;
+            
+            const allTab = document.createElement('button');
+            allTab.className = `category-tab ${currentCategory === 'all' ? 'active' : ''}`;
+            allTab.textContent = `Todas (${items.length})`;
+            allTab.onclick = () => selectCategory('all');
+            container.appendChild(allTab);
+            
+            categories.forEach(category => {
+                const count = items.filter(item => { const cats = item.categories || [item.category]; return cats.includes(category); }).length;
+                const tab = document.createElement('button');
+                tab.className = `category-tab ${currentCategory === category ? 'active' : ''}`;
+                tab.textContent = `${category} (${count})`;
+                tab.onclick = () => selectCategory(category);
+                container.appendChild(tab);
+            });
+        }
+
+        function selectCategory(category) {
+            currentCategory = category;
+            document.getElementById('categoryFilter').value = category === 'all' ? '' : category;
+            renderCategoryTabs();
+            renderContent();
+        }
+
+        async function addAnime() {
+            const name = document.getElementById('animeName').value.trim();
+            const season = parseInt(document.getElementById('animeSeason').value) || 1;
+            const episode = parseInt(document.getElementById('animeEpisode').value) || 0;
+            if (!name || selectedCategories.length === 0 || currentRating === 0) { alert('Por favor, completa todos los campos obligatorios (nombre, al menos una categoria y valoracion)'); return; }
+
+            const addBtn = document.getElementById('addAnimeBtn');
+            addBtn.disabled = true; addBtn.textContent = 'Anadiendo...';
+            const anime = { name, categories: [...selectedCategories], rating: currentRating, season, episode, image: newAnimeImage || null, openings: currentOpenings || [], dateAdded: new Date().toISOString() };
+            try {
+                updateSyncStatus('Guardando...', 'syncing');
+                await setDoc(doc(db, 'users', currentUser.uid, 'animes', Date.now().toString()), anime);
+                document.getElementById('animeName').value = '';
+                document.getElementById('animeSeason').value = '1';
+                document.getElementById('animeEpisode').value = '1';
+                document.getElementById('animeImage').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                currentRating = 0; currentOpenings = []; selectedCategories = []; newAnimeImage = null;
+                updateStarDisplay('#newAnimeRating', 0);
+                renderOpeningsDisplay('newAnimeOpenings', [], 'new');
+                updateCategoryCheckboxes();
+                updateSyncStatus('Anime anadido', '');
+            } catch (error) { console.error('Error anadiendo anime:', error); updateSyncStatus('Error guardando', 'offline'); alert('Error al guardar el anime.'); }
+            finally { addBtn.disabled = false; addBtn.textContent = 'Anadir'; }
+        }
+
+        async function addMovie() {
+            const name = document.getElementById('movieName').value.trim();
+            const song = document.getElementById('movieSong').value.trim();
+            if (!name || movieSelectedCategories.length === 0 || movieRating === 0) { alert('Por favor, completa todos los campos obligatorios (nombre, al menos una categoria y valoracion)'); return; }
+
+            const addBtn = document.getElementById('addMovieBtn');
+            addBtn.disabled = true; addBtn.textContent = 'Anadiendo...';
+            const movie = { name, categories: [...movieSelectedCategories], rating: movieRating, song: song || null, image: newMovieImage || null, dateAdded: new Date().toISOString() };
+            try {
+                updateSyncStatus('Guardando...', 'syncing');
+                await setDoc(doc(db, 'users', currentUser.uid, 'movies', Date.now().toString()), movie);
+                document.getElementById('movieName').value = '';
+                document.getElementById('movieSong').value = '';
+                document.getElementById('movieImage').value = '';
+                document.getElementById('movieImagePreview').style.display = 'none';
+                movieRating = 0; movieSelectedCategories = []; newMovieImage = null;
+                updateStarDisplay('#newMovieRating', 0);
+                updateCategoryCheckboxes();
+                updateSyncStatus('Pelicula anadida', '');
+            } catch (error) { console.error('Error anadiendo pelicula:', error); updateSyncStatus('Error guardando', 'offline'); alert('Error al guardar la pelicula.'); }
+            finally { addBtn.disabled = false; addBtn.textContent = 'Anadir'; }
+        }
+
+        function getFilteredItems() {
+            let items = currentContentType === 'animes' ? animes : movies;
+            if (currentCategory !== 'all') items = items.filter(item => { const cats = item.categories || [item.category]; return cats.includes(currentCategory); });
+            if (searchTerm) items = items.filter(item => item.name.toLowerCase().includes(searchTerm));
+            return items.sort((a, b) => b.rating - a.rating);
+        }
+
+        function renderContent() {
+            const filteredItems = getFilteredItems();
+            if (currentView === 'grid') renderGrid(filteredItems);
+            else renderList(filteredItems);
+        }
+
+        function renderGrid(items) {
+            const container = document.getElementById('animeGrid');
+            const isMovies = currentContentType === 'movies';
+            const emptyText = isMovies ? 'peliculas' : 'animes';
+            
+            if (items.length === 0) { 
+                container.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><h3>No se encontraron ${emptyText}</h3><p>Prueba con otros filtros o anade uno nuevo</p></div>`; 
+                return; 
+            }
+            
+            container.innerHTML = items.map(item => {
+                const cats = item.categories || [item.category];
+                const categoriesHtml = cats.map(cat => `<span class="anime-category-tag">${cat}</span>`).join('');
+                
+                if (isMovies) {
+                    const songHtml = item.song ? `<div class="anime-opening"><div class="opening-label">Cancion favorita:</div><span class="song-tag">${item.song}</span></div>` : '';
+                    return `<div class="anime-card movie-card">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="anime-image">` : `<div class="anime-image">Sin imagen</div>`}
+                        <div class="anime-info">
+                            <span class="movie-badge">Pelicula</span>
+                            <div class="anime-title">${item.name}</div>
+                            <div class="anime-categories">${categoriesHtml}</div>
+                            <div class="anime-rating"><span style="color: #ffd700;">${'&#9733;'.repeat(item.rating)}${'&#9734;'.repeat(5 - item.rating)}</span></div>
+                            ${songHtml}
+                            <div class="anime-actions">
+                                <button class="btn btn-sm btn-movie" onclick="editMovie('${item.id}')">Editar</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteMovie('${item.id}')">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    const openingStars = item.openings && item.openings.length > 0 ? item.openings.map(season => `<span style="color: #ff6b9d;" title="Opening T${season}">T${season}*</span>`).join(' ') : '<span style="color: var(--text-muted);">Sin openings favoritos</span>';
+                    return `<div class="anime-card">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="anime-image">` : `<div class="anime-image">Sin imagen</div>`}
+                        <div class="anime-info">
+                            <div class="anime-title">${item.name}</div>
+                            <div class="anime-categories">${categoriesHtml}</div>
+                            <div class="anime-progress">T${item.season} - Ep. ${item.episode}</div>
+                            <div class="anime-rating"><span style="color: #ffd700;">${'&#9733;'.repeat(item.rating)}${'&#9734;'.repeat(5 - item.rating)}</span></div>
+                            <div class="anime-opening"><div class="opening-label">Openings favoritos:</div><div>${openingStars}</div></div>
+                            <div class="anime-actions">
+                                <button class="btn btn-sm" onclick="editAnime('${item.id}')">Editar</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAnime('${item.id}')">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function renderList(items) {
+            const container = document.getElementById('animeList');
+            const isMovies = currentContentType === 'movies';
+            const emptyText = isMovies ? 'peliculas' : 'animes';
+            
+            if (items.length === 0) { 
+                container.innerHTML = `<div class="empty-state"><h3>No se encontraron ${emptyText}</h3><p>Prueba con otros filtros o anade uno nuevo</p></div>`; 
+                return; 
+            }
+            
+            container.innerHTML = items.map(item => {
+                if (isMovies) {
+                    return `<div class="anime-list-item movie-item">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="anime-thumb">` : `<div class="anime-thumb" style="background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);">Sin img</div>`}
+                        <div class="anime-list-title">${item.name}</div>
+                        <div class="anime-list-progress">${item.song ? item.song : 'Sin cancion'}</div>
+                        <div class="anime-list-rating"><span style="color: #ffd700;">${'&#9733;'.repeat(item.rating)}</span><span style="color: var(--border-color);">${'&#9734;'.repeat(5 - item.rating)}</span></div>
+                        <div class="anime-list-actions">
+                            <button class="btn btn-sm btn-movie" onclick="editMovie('${item.id}')">Editar</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteMovie('${item.id}')">Eliminar</button>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div class="anime-list-item">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="anime-thumb">` : `<div class="anime-thumb" style="background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);">Sin img</div>`}
+                        <div class="anime-list-title">${item.name}</div>
+                        <div class="anime-list-progress">T${item.season} - Ep. ${item.episode}</div>
+                        <div class="anime-list-rating"><span style="color: #ffd700;">${'&#9733;'.repeat(item.rating)}</span><span style="color: var(--border-color);">${'&#9734;'.repeat(5 - item.rating)}</span></div>
+                        <div class="anime-list-actions">
+                            <button class="btn btn-sm" onclick="editAnime('${item.id}')">Editar</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAnime('${item.id}')">Eliminar</button>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function editAnime(id) {
+            const anime = animes.find(a => a.id === id);
+            if (!anime) return;
+            currentEditId = id; editRating = anime.rating;
+            editOpenings = anime.openings ? [...anime.openings] : [];
+            editAnimeImage = anime.image;
+            editSelectedCategories = anime.categories ? [...anime.categories] : [anime.category];
+            document.getElementById('editAnimeName').value = anime.name;
+            document.getElementById('editAnimeSeason').value = anime.season;
+            document.getElementById('editAnimeEpisode').value = anime.episode;
+            updateStarDisplay('#editAnimeRating', editRating);
+            renderOpeningsDisplay('editAnimeOpenings', editOpenings, 'edit');
+            renderCategoryCheckboxList('editAnimeCategoryList', editSelectedCategories, 'edit');
+            if (anime.image) { document.getElementById('editImagePreview').src = anime.image; document.getElementById('editImagePreview').style.display = 'block'; }
+            else document.getElementById('editImagePreview').style.display = 'none';
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function editMovie(id) {
+            const movie = movies.find(m => m.id === id);
+            if (!movie) return;
+            currentEditMovieId = id; editMovieRating = movie.rating;
+            editMovieImage = movie.image;
+            editMovieSelectedCategories = movie.categories ? [...movie.categories] : [movie.category];
+            document.getElementById('editMovieName').value = movie.name;
+            document.getElementById('editMovieSong').value = movie.song || '';
+            updateStarDisplay('#editMovieRating', editMovieRating);
+            renderCategoryCheckboxList('editMovieCategoryList', editMovieSelectedCategories, 'editMovie');
+            if (movie.image) { document.getElementById('editMovieImagePreview').src = movie.image; document.getElementById('editMovieImagePreview').style.display = 'block'; }
+            else document.getElementById('editMovieImagePreview').style.display = 'none';
+            document.getElementById('editMovieModal').style.display = 'block';
+        }
+
+        async function saveAnimeEdit() {
+            const name = document.getElementById('editAnimeName').value.trim();
+            const season = parseInt(document.getElementById('editAnimeSeason').value) || 1;
+            const episode = parseInt(document.getElementById('editAnimeEpisode').value) || 0;
+            if (!name || editSelectedCategories.length === 0 || editRating === 0) { alert('Por favor, completa todos los campos obligatorios'); return; }
+            const saveBtn = document.getElementById('saveEditBtn');
+            saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+            const updatedAnime = { name, categories: [...editSelectedCategories], rating: editRating, season, episode, image: editAnimeImage, openings: editOpenings || [], dateAdded: animes.find(a => a.id === currentEditId)?.dateAdded || new Date().toISOString() };
+            try {
+                updateSyncStatus('Guardando...', 'syncing');
+                await setDoc(doc(db, 'users', currentUser.uid, 'animes', currentEditId), updatedAnime);
+                updateSyncStatus('Cambios guardados', '');
+                closeEditModal();
+            } catch (error) { console.error('Error guardando cambios:', error); updateSyncStatus('Error guardando', 'offline'); alert('Error al guardar los cambios.'); }
+            finally { saveBtn.disabled = false; saveBtn.textContent = 'Guardar Cambios'; }
+        }
+
+        async function saveMovieEdit() {
+            const name = document.getElementById('editMovieName').value.trim();
+            const song = document.getElementById('editMovieSong').value.trim();
+            if (!name || editMovieSelectedCategories.length === 0 || editMovieRating === 0) { alert('Por favor, completa todos los campos obligatorios'); return; }
+            const saveBtn = document.getElementById('saveMovieEditBtn');
+            saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+            const updatedMovie = { name, categories: [...editMovieSelectedCategories], rating: editMovieRating, song: song || null, image: editMovieImage, dateAdded: movies.find(m => m.id === currentEditMovieId)?.dateAdded || new Date().toISOString() };
+            try {
+                updateSyncStatus('Guardando...', 'syncing');
+                await setDoc(doc(db, 'users', currentUser.uid, 'movies', currentEditMovieId), updatedMovie);
+                updateSyncStatus('Cambios guardados', '');
+                closeEditMovieModal();
+            } catch (error) { console.error('Error guardando cambios:', error); updateSyncStatus('Error guardando', 'offline'); alert('Error al guardar los cambios.'); }
+            finally { saveBtn.disabled = false; saveBtn.textContent = 'Guardar Cambios'; }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editAnimeImage').value = '';
+            document.getElementById('editImagePreview').style.display = 'none';
+            currentEditId = null; editRating = 0; editOpenings = []; editSelectedCategories = []; editAnimeImage = null;
+        }
+
+        function closeEditMovieModal() {
+            document.getElementById('editMovieModal').style.display = 'none';
+            document.getElementById('editMovieImage').value = '';
+            document.getElementById('editMovieImagePreview').style.display = 'none';
+            currentEditMovieId = null; editMovieRating = 0; editMovieSelectedCategories = []; editMovieImage = null;
+        }
+
+        async function deleteAnime(id) {
+            const anime = animes.find(a => a.id === id);
+            if (anime && confirm(`Eliminar "${anime.name}"?`)) {
+                try { updateSyncStatus('Eliminando...', 'syncing'); await deleteDoc(doc(db, 'users', currentUser.uid, 'animes', id)); updateSyncStatus('Anime eliminado', ''); }
+                catch (error) { console.error('Error eliminando anime:', error); updateSyncStatus('Error eliminando', 'offline'); alert('Error al eliminar el anime.'); }
+            }
+        }
+
+        async function deleteMovie(id) {
+            const movie = movies.find(m => m.id === id);
+            if (movie && confirm(`Eliminar "${movie.name}"?`)) {
+                try { updateSyncStatus('Eliminando...', 'syncing'); await deleteDoc(doc(db, 'users', currentUser.uid, 'movies', id)); updateSyncStatus('Pelicula eliminada', ''); }
+                catch (error) { console.error('Error eliminando pelicula:', error); updateSyncStatus('Error eliminando', 'offline'); alert('Error al eliminar la pelicula.'); }
+            }
+        }
+
+        function exportBackup() {
+            const backupData = {
+                version: 3, exportDate: new Date().toISOString(), categories,
+                animes: animes.map(anime => ({ name: anime.name, categories: anime.categories || [anime.category], rating: anime.rating, season: anime.season, episode: anime.episode, image: anime.image, openings: anime.openings || [], dateAdded: anime.dateAdded })),
+                movies: movies.map(movie => ({ name: movie.name, categories: movie.categories || [movie.category], rating: movie.rating, song: movie.song, image: movie.image, dateAdded: movie.dateAdded }))
+            };
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `animker-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            updateSyncStatus('Backup exportado', '');
+        }
+
+        async function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    if (!backupData.categories || !backupData.animes) { alert('El archivo de backup no es valido'); return; }
+                    const movieCount = backupData.movies ? backupData.movies.length : 0;
+                    if (!confirm(`Importar este backup? Anadira ${backupData.categories.length} categorias, ${backupData.animes.length} animes y ${movieCount} peliculas. Los datos existentes se mantendran.`)) return;
+                    updateSyncStatus('Importando...', 'syncing');
+                    const newCategories = backupData.categories.filter(cat => !categories.includes(cat));
+                    categories = [...categories, ...newCategories];
+                    await saveCategoriesToFirebase();
+                    
+                    for (const anime of backupData.animes) {
+                        const exists = animes.some(a => a.name === anime.name);
+                        if (!exists) {
+                            const animeId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                            await setDoc(doc(db, 'users', currentUser.uid, 'animes', animeId), { name: anime.name, categories: anime.categories || [anime.category], rating: anime.rating, season: anime.season, episode: anime.episode, image: anime.image || null, openings: anime.openings || [], dateAdded: anime.dateAdded || new Date().toISOString() });
+                        }
+                    }
+                    
+                    if (backupData.movies) {
+                        for (const movie of backupData.movies) {
+                            const exists = movies.some(m => m.name === movie.name);
+                            if (!exists) {
+                                const movieId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                                await setDoc(doc(db, 'users', currentUser.uid, 'movies', movieId), { name: movie.name, categories: movie.categories || [movie.category], rating: movie.rating, song: movie.song || null, image: movie.image || null, dateAdded: movie.dateAdded || new Date().toISOString() });
+                            }
+                        }
+                    }
+                    
+                    updateSyncStatus('Backup importado', '');
+                    alert('Backup importado correctamente');
+                } catch (error) { console.error('Error importando backup:', error); updateSyncStatus('Error importando', 'offline'); alert('Error al importar el backup.'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        window.onclick = function(event) { 
+            const modal = document.getElementById('editModal'); 
+            const movieModal = document.getElementById('editMovieModal');
+            if (event.target === modal) closeEditModal(); 
+            if (event.target === movieModal) closeEditMovieModal();
+        }
+    </script>
+</body>
+</html>
