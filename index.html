@@ -1113,6 +1113,15 @@
         .status-option.selected[data-status="planned"] { border-color: var(--planned); background: rgba(139, 92, 246, 0.1); }
         .status-option.selected[data-status="completed"] { border-color: var(--completed); background: rgba(34, 197, 94, 0.1); }
 
+        /* Public share view */
+        .shared-view { max-width: 1100px; margin: 0 auto; padding: 40px 24px 64px; }
+        .shared-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+        .shared-header h1 { font-size: 30px; letter-spacing: -0.6px; margin-bottom: 6px; }
+        .shared-header p { color: var(--text-secondary); font-size: 14px; }
+        .shared-brand { font-weight: 700; font-size: 14px; letter-spacing: .5px; }
+        .shared-view .cards-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+        .shared-empty { padding: 48px 20px; text-align: center; color: var(--text-secondary); }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header-content { padding: 0 16px; }
@@ -1137,6 +1146,7 @@
     </style>
 </head>
 <body>
+    <section class="shared-view" id="sharedView" style="display:none;"></section>
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <h1>ANIMKER</h1>
@@ -1200,6 +1210,7 @@
                 </div>
                 <button class="btn btn-outline btn-sm" onclick="togglePanel('categoryManager')">Categorias</button>
                 <button class="btn btn-outline btn-sm" onclick="togglePanel('backupPanel')">Backup</button>
+                <button class="btn btn-outline btn-sm" onclick="shareCompleted()" title="Comparte tus completados sin registro">Compartir completados</button>
                 <button class="btn btn-sm" id="btnAdd" onclick="togglePanel('addPanel')">+ Nuevo</button>
             </div>
         </div>
@@ -1545,11 +1556,12 @@
         };
 
         let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
+        const isSharedView = window.location.hash.startsWith('#share=');
 
         // DOM Cache for performance
         const dom = {};
         const domIds = [
-            'loginOverlay', 'userAvatar', 'syncStatus', 'syncText', 'themeIcon',
+            'loginOverlay', 'sharedView', 'userAvatar', 'syncStatus', 'syncText', 'themeIcon',
             'mobileNav', 'tabAnimes', 'tabMovies', 'tabAnimesMobile', 'tabMoviesMobile',
             'searchInput', 'categoryFilter', 'cardsGrid', 'listView', 'categoryBar',
             'categoryList', 'newCategoryChips', 'editCategoryChips', 'newOpenings', 'editOpenings',
@@ -1586,6 +1598,7 @@
         window.removeOpening = removeOpening;
         window.exportBackup = exportBackup;
         window.importBackup = importBackup;
+        window.shareCompleted = shareCompleted;
         window.selectSection = selectSection;
         window.changeItemStatus = changeItemStatus;
         window.selectStatus = selectStatus;
@@ -1599,6 +1612,7 @@
             cacheDom();
             loadTheme();
             setupMobileNav();
+            if (isSharedView) renderSharedView();
         });
 
         function cacheDom() {
@@ -1635,6 +1649,10 @@
 
         // Auth
         onAuthStateChanged(auth, user => {
+            if (isSharedView) {
+                dom.loginOverlay.style.display = 'none';
+                return;
+            }
             if (user) {
                 state.currentUser = user;
                 dom.loginOverlay.style.display = 'none';
@@ -2615,6 +2633,59 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function encodeShareData(data) {
+            const bytes = new TextEncoder().encode(JSON.stringify(data));
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function decodeShareData(value) {
+            const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
+            return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
+        }
+
+        async function shareCompleted() {
+            if (!state.currentUser) return;
+            const data = {
+                version: 1,
+                owner: state.currentUser.displayName || 'Usuario de ANIMKER',
+                createdAt: new Date().toISOString(),
+                animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(({ id, ...item }) => item),
+                movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(({ id, ...item }) => item)
+            };
+            const url = location.href.split('#')[0] + '#share=' + encodeShareData(data);
+            try {
+                await navigator.clipboard.writeText(url);
+                alert('Enlace copiado. Cualquier persona podrá abrirlo sin registrarse.');
+            } catch {
+                prompt('Copia este enlace para compartir tus completados:', url);
+            }
+        }
+
+        function renderSharedView() {
+            try {
+                const payload = decodeShareData(location.hash.slice('#share='.length));
+                const items = [...(payload.animes || []).map(i => ({ ...i, kind: 'Anime' })), ...(payload.movies || []).map(i => ({ ...i, kind: 'Película' }))];
+                document.querySelector('.header')?.remove();
+                document.querySelector('.main')?.remove();
+                dom.loginOverlay.style.display = 'none';
+                dom.sharedView.style.display = 'block';
+                dom.sharedView.innerHTML = `
+                    <div class="shared-header"><div><div class="shared-brand">ANIMKER</div><h1>Completados de ${escapeHtml(payload.owner || 'Usuario')}</h1><p>${items.length} títulos compartidos · Abierto para todos</p></div><button class="btn btn-outline btn-sm" onclick="location.hash=''; location.reload();">Ir a mi biblioteca</button></div>
+                    ${items.length ? `<div class="cards-grid">${items.map(item => {
+                        const stars = Array(5).fill(0).map((_, i) => `<span class="${i < (item.rating || 0) ? '' : 'empty'}">&#9733;</span>`).join('');
+                        const details = item.kind === 'Anime' ? `T${item.season || 1} · Ep. ${item.episode || 1}` : (item.song || 'Película');
+                        const extra = item.kind === 'Anime' ? (item.openings?.length ? `Openings: ${item.openings.map(o => `T${o}`).join(', ')}` : 'Sin openings') : `Canción: ${escapeHtml(item.song || '—')}`;
+                        return `<article class="card">${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="card-image">` : '<div class="card-placeholder">Sin imagen</div>'}<div class="card-body"><div class="card-badges"><span class="card-badge badge-completed">${item.kind}</span></div><h3 class="card-title">${escapeHtml(item.name)}</h3><div class="card-categories">${(item.categories || []).map(c => `<span class="card-tag">${escapeHtml(c)}</span>`).join('')}</div><div class="card-meta">${details}</div><div class="card-stars">${stars}</div><div class="card-extra">${extra}</div></div></article>`;
+                    }).join('')}</div>` : '<div class="panel shared-empty"><h3>No hay completados para mostrar</h3><p>El propietario todavía no ha compartido títulos completados.</p></div>'}
+                `;
+            } catch (error) {
+                document.querySelector('.header')?.remove(); document.querySelector('.main')?.remove(); dom.loginOverlay.style.display = 'none'; dom.sharedView.style.display = 'block';
+                dom.sharedView.innerHTML = '<div class="panel shared-empty"><h3>Enlace no válido</h3><p>Este enlace de compartir está incompleto o ha caducado.</p></div>';
+            }
         }
 
         // Backup - maintains compatibility
