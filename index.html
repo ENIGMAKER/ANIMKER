@@ -2647,27 +2647,47 @@
             return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
         }
 
+        function getShareItem(item) {
+            // Images are kept in Firestore, never in the URL. This keeps links short.
+            const { id, ...clean } = item;
+            return clean;
+        }
+
         async function shareCompleted() {
             if (!state.currentUser) return;
             const data = {
-                version: 1,
+                version: 2,
                 owner: state.currentUser.displayName || 'Usuario de ANIMKER',
                 createdAt: new Date().toISOString(),
-                animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(({ id, ...item }) => item),
-                movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(({ id, ...item }) => item)
+                animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
+                movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
             };
-            const url = location.href.split('#')[0] + '#share=' + encodeShareData(data);
+            const shareId = crypto.randomUUID().replaceAll('-', '').slice(0, 16);
             try {
+                await setDoc(doc(db, 'sharedLists', shareId), data);
+                const url = location.href.split('#')[0] + '#share=' + shareId;
                 await navigator.clipboard.writeText(url);
                 alert('Enlace copiado. Cualquier persona podrá abrirlo sin registrarse.');
-            } catch {
-                prompt('Copia este enlace para compartir tus completados:', url);
+            } catch (error) {
+                console.error('[v0] share creation error', error);
+                alert('No se pudo crear el enlace. Comprueba la conexión e inténtalo de nuevo.');
             }
         }
 
-        function renderSharedView() {
+        async function renderSharedView() {
+            const shareId = location.hash.slice('#share='.length).trim();
+            const showError = () => {
+                document.querySelector('.header')?.remove();
+                document.querySelector('.main')?.remove();
+                dom.loginOverlay.style.display = 'none';
+                dom.sharedView.style.display = 'block';
+                dom.sharedView.innerHTML = '<div class="panel shared-empty"><h3>Enlace no válido</h3><p>Este enlace de compartir está incompleto o ha caducado.</p></div>';
+            };
             try {
-                const payload = decodeShareData(location.hash.slice('#share='.length));
+                if (!/^[a-zA-Z0-9]{16}$/.test(shareId)) return showError();
+                const sharedDoc = await getDoc(doc(db, 'sharedLists', shareId));
+                if (!sharedDoc.exists()) return showError();
+                const payload = sharedDoc.data();
                 const items = [...(payload.animes || []).map(i => ({ ...i, kind: 'Anime' })), ...(payload.movies || []).map(i => ({ ...i, kind: 'Película' }))];
                 document.querySelector('.header')?.remove();
                 document.querySelector('.main')?.remove();
@@ -2679,12 +2699,12 @@
                         const stars = Array(5).fill(0).map((_, i) => `<span class="${i < (item.rating || 0) ? '' : 'empty'}">&#9733;</span>`).join('');
                         const details = item.kind === 'Anime' ? `T${item.season || 1} · Ep. ${item.episode || 1}` : (item.song || 'Película');
                         const extra = item.kind === 'Anime' ? (item.openings?.length ? `Openings: ${item.openings.map(o => `T${o}`).join(', ')}` : 'Sin openings') : `Canción: ${escapeHtml(item.song || '—')}`;
-                        return `<article class="card">${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="card-image">` : '<div class="card-placeholder">Sin imagen</div>'}<div class="card-body"><div class="card-badges"><span class="card-badge badge-completed">${item.kind}</span></div><h3 class="card-title">${escapeHtml(item.name)}</h3><div class="card-categories">${(item.categories || []).map(c => `<span class="card-tag">${escapeHtml(c)}</span>`).join('')}</div><div class="card-meta">${details}</div><div class="card-stars">${stars}</div><div class="card-extra">${extra}</div></div></article>`;
+                        return `<article class="card">${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="card-image" loading="lazy">` : '<div class="card-placeholder">Sin imagen</div>'}<div class="card-body"><div class="card-badges"><span class="card-badge badge-completed">${item.kind}</span></div><h3 class="card-title">${escapeHtml(item.name)}</h3><div class="card-categories">${(item.categories || []).map(c => `<span class="card-tag">${escapeHtml(c)}</span>`).join('')}</div><div class="card-meta">${details}</div><div class="card-stars">${stars}</div><div class="card-extra">${extra}</div></div></article>`;
                     }).join('')}</div>` : '<div class="panel shared-empty"><h3>No hay completados para mostrar</h3><p>El propietario todavía no ha compartido títulos completados.</p></div>'}
                 `;
             } catch (error) {
-                document.querySelector('.header')?.remove(); document.querySelector('.main')?.remove(); dom.loginOverlay.style.display = 'none'; dom.sharedView.style.display = 'block';
-                dom.sharedView.innerHTML = '<div class="panel shared-empty"><h3>Enlace no válido</h3><p>Este enlace de compartir está incompleto o ha caducado.</p></div>';
+                console.error('[v0] shared view error', error);
+                showError();
             }
         }
 
