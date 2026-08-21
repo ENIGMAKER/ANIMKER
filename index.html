@@ -2648,29 +2648,51 @@
         }
 
         function getShareItem(item) {
-            // Images are kept in Firestore, never in the URL. This keeps links short.
-            const { id, ...clean } = item;
+            // Nunca metemos el objeto completo: undefined no es válido en Firestore y
+            // las imágenes propias se guardan ya comprimidas por handleImage().
+            const clean = {
+                name: typeof item.name === 'string' ? item.name : '',
+                subName: typeof item.subName === 'string' ? item.subName : '',
+                categories: Array.isArray(item.categories) ? item.categories.filter(Boolean).map(String) : [],
+                rating: Number.isFinite(Number(item.rating)) ? Math.max(0, Math.min(5, Number(item.rating))) : 0,
+                season: Number.isFinite(Number(item.season)) ? Number(item.season) : 1,
+                episode: Number.isFinite(Number(item.episode)) ? Number(item.episode) : 1,
+                openings: Array.isArray(item.openings) ? item.openings.filter(Number.isFinite).map(Number) : [],
+                song: typeof item.song === 'string' ? item.song : '',
+                image: typeof item.image === 'string' && item.image.length < 900000 ? item.image : ''
+            };
             return clean;
         }
 
         async function shareCompleted() {
             if (!state.currentUser) return;
+            const button = document.querySelector('[onclick="shareCompleted()"]');
+            if (button) { button.disabled = true; button.textContent = 'Creando enlace…'; }
             const data = {
-                version: 2,
-                owner: state.currentUser.displayName || 'Usuario de ANIMKER',
+                version: 3,
+                owner: state.currentUser.displayName || state.currentUser.email || 'Usuario de ANIMKER',
                 createdAt: new Date().toISOString(),
                 animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
                 movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
             };
             const shareId = crypto.randomUUID().replaceAll('-', '').slice(0, 16);
             try {
-                await setDoc(doc(db, 'sharedLists', shareId), data);
+                // Firestore necesita que el documento sea completamente serializable.
+                await setDoc(doc(db, 'sharedLists', shareId), JSON.parse(JSON.stringify(data)));
                 const url = location.href.split('#')[0] + '#share=' + shareId;
-                await navigator.clipboard.writeText(url);
+                try {
+                    await navigator.clipboard.writeText(url);
+                } catch {
+                    const input = document.createElement('textarea');
+                    input.value = url; input.style.position = 'fixed'; input.style.opacity = '0';
+                    document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
+                }
                 alert('Enlace copiado. Cualquier persona podrá abrirlo sin registrarse.');
             } catch (error) {
                 console.error('[v0] share creation error', error);
-                alert('No se pudo crear el enlace. Comprueba la conexión e inténtalo de nuevo.');
+                alert('No se pudo crear el enlace. Revisa que Firestore permita crear documentos en “sharedLists”.');
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'Compartir completados'; }
             }
         }
 
