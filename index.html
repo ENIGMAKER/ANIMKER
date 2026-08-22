@@ -1559,7 +1559,6 @@
 
         let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
         let migratingImages = false; // evita solapar varias pasadas de migración de imágenes a Storage
-        let migrationPromise = null;
         const queryShare = new URLSearchParams(window.location.search).get('share');
         const hostHash = window.parent !== window ? window.parent.location.hash : window.location.hash;
         const isSharedView = Boolean(queryShare) || hostHash.startsWith('#share=');
@@ -1818,30 +1817,18 @@
         // Devuelve la URL pública de la imagen en Storage. Si ya existe un archivo con
         // ese mismo hash, lo reutiliza (no sube nada). Si no existe, lo sube una vez.
         // Si dataUrl ya es una URL http(s) (imagen ya migrada) o está vacía, la devuelve tal cual.
-        function withTimeout(promise, ms, label) {
-            let timer;
-            const timeout = new Promise((_, reject) => {
-                timer = setTimeout(() => reject(new Error(label + '_timeout')), ms);
-            });
-            return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-        }
-
         async function uploadImageToStorage(dataUrl) {
             if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
             const bytes = dataUrlToBytes(dataUrl);
-            if (!bytes.length) throw new Error('empty_image');
-            const hash = await withTimeout(hashBytes(bytes), 15000, 'image_hash');
+            const hash = await hashBytes(bytes);
             const fileRef = storageRef(storage, `images/${hash}.jpg`);
             try {
-                return await withTimeout(getDownloadURL(fileRef), 15000, 'image_lookup');
+                return await getDownloadURL(fileRef); // ya existe -> se reutiliza, sin duplicados
             } catch (err) {
-                // Firebase may report the missing object with either code depending on
-                // the SDK/runtime. Only then proceed with the upload.
-                const missing = err?.code === 'storage/object-not-found' || /object.not.found|image_lookup_timeout/i.test(err?.message || '');
-                if (!missing) throw err;
+                if (err?.code !== 'storage/object-not-found') throw err;
             }
-            await withTimeout(uploadBytes(fileRef, bytes, { contentType: 'image/jpeg' }), 30000, 'image_upload');
-            return await withTimeout(getDownloadURL(fileRef), 15000, 'image_url');
+            await uploadBytes(fileRef, bytes, { contentType: 'image/jpeg' });
+            return await getDownloadURL(fileRef);
         }
 
         // Migración silenciosa y perezosa: recorre los animes/películas del usuario ya
@@ -1851,68 +1838,48 @@
         // pendiente, así que es barata de llamar repetidamente. Un fallo puntual en una
         // imagen no aborta el resto ni afecta al uso normal de la app: esa imagen se
         // queda como estaba (sigue funcionando en local) y se reintentará más adelante.
-        async function migrateLocalImages() {
-            if (!state.currentUser) return migrationPromise;
-            if (migrationPromise) return migrationPromise;
-            const uid = state.currentUser.uid;
-            const pending = [
-                ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:image/')).map(item => ({ item, ref: 'animes' })),
-                ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:image/')).map(item => ({ item, ref: 'movies' }))
-            ];
-            if (!pending.length) return;
+  async function migrateLocalImages() {
+  if (migratingImages || !state.currentUser) return;
+  const uid = state.currentUser.uid;
+  const pending = [
+  ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:')).map(a => ({ item: a, ref: 'animes' })),
+  ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:')).map(m => ({ item: m, ref: 'movies' }))
+  ];
+  if (pending.length === 0) return;
 
-            migrationPromise = (async () => {
-                migratingImages = true;
-                const total = pending.length;
-                let completed = 0;
-                let failed = 0;
-                updateSyncStatus(`Optimizando imágenes… 0/${total}`, 'syncing');
-                for (const { item, ref } of pending) {
-                    try {
-                        const oldImage = item.image;
-                        const url = await uploadImageToStorage(oldImage);
-                        if (url && url !== oldImage) {
-                            item.image = url; // actualiza también el estado local antes de compartir
-                            await withTimeout(setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true }), 20000, 'image_save');
-                        }
-                    } catch (err) {
-                        failed++;
-                        console.error('[v0] migración de imagen fallida para', item.name, err);
-                    } finally {
-                        completed++;
-                        updateSyncStatus(`Optimizando imágenes… ${completed}/${total}`, 'syncing');
-                        // Cede el hilo para que el contador y la interfaz se repinten.
-                        await new Promise(resolve => setTimeout(resolve, 0));
-                    }
-                }
-                updateSyncStatus(failed ? `Sincronizado (${failed} pendientes)` : 'Sincronizado', '');
-            })().finally(() => {
-                migratingImages = false;
-                migrationPromise = null;
-            });
-            return migrationPromise;
-        }
+  migratingImages = true;
+  let completed = 0;
+  let failed = 0;
+  const total = pending.length;
+  const withTimeout = (promise, ms, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(label + '_timeout')), ms))
+  ]);
+  const showProgress = () => updateSyncStatus('Optimizando imágenes… ' + completed + '/' + total, 'syncing');
+  showProgress();
 
-        // Garantiza que un enlace nuevo nunca pierda imágenes antiguas aunque el snapshot
-        // todavía no haya terminado de migrarlas.
-        async function getShareItemAsync(item) {
-            const clean = getShareItem(item);
-            if (clean.image) return clean;
-            if (typeof item.image === 'string' && item.image.startsWith('data:image/')) {
-                try {
-                    const url = await uploadImageToStorage(item.image);
-                    if (url) {
-                        item.image = url;
-                        clean.image = url;
-                        if (state.currentUser) {
-                            const ref = state.animes.includes(item) ? 'animes' : 'movies';
-                            await setDoc(doc(db, 'users', state.currentUser.uid, ref, item.id), { image: url }, { merge: true });
-                        }
-                    }
-                } catch (err) { console.error('[v0] imagen omitida del enlace', item.name, err); }
-            }
-            return clean;
-        }
+  try {
+  for (const { item, ref } of pending) {
+  try {
+  const original = item.image;
+  const url = await withTimeout(uploadImageToStorage(original), 45000, 'storage_upload');
+  if (!url || url === original) throw new Error('storage_no_url');
+  // Actualizar el objeto local antes del siguiente snapshot evita que una
+  // nueva lectura vuelva a poner esta imagen en la cola durante la migración.
+  item.image = url;
+  await withTimeout(setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true }), 20000, 'firestore_write');
+  completed++;
+  } catch (err) {
+  failed++;
+  console.error('[v0] migración de imagen fallida para', item.name, err);
+  }
+  showProgress();
+  }
+  } finally {
+  migratingImages = false;
+  updateSyncStatus(failed ? 'Sincronizado (' + failed + ' imágenes pendientes)' : 'Sincronizado', '');
+  }
+  }
 
         function escapeHtml(s) {
             return (s || '').replace(/[&<>"']/g, c => ({
@@ -2825,17 +2792,12 @@
             const button = document.querySelector('[onclick="shareCompleted()"]');
             if (button) { button.disabled = true; button.textContent = 'Creando enlace…'; }
             try {
-                // Espera la migración iniciada por onSnapshot y vuelve a resolver cada
-                // imagen: así los datos antiguos nunca se convierten en tarjetas sin imagen.
-                await migrateLocalImages();
-                const completedAnimes = state.animes.filter(i => (i.status || 'completed') === 'completed');
-                const completedMovies = state.movies.filter(i => (i.status || 'completed') === 'completed');
                 const data = {
-                    version: 5,
+                    version: 4,
                     owner: state.currentUser.displayName || state.currentUser.email || 'Usuario de ANIMKER',
                     createdAt: new Date().toISOString(),
-                    animes: await Promise.all(completedAnimes.map(getShareItemAsync)),
-                    movies: await Promise.all(completedMovies.map(getShareItemAsync))
+                    animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
+                    movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
                 };
                 // El enlace es autónomo: no depende de permisos, cuotas ni reglas de Firestore.
                 const encoded = await encodeShareData(data);
@@ -2954,7 +2916,7 @@
                                 rating: a.rating, 
                                 season: a.season, 
                                 episode: a.episode, 
-                                image: await uploadImageToStorage(a.image), 
+                                image: a.image, 
                                 openings: a.openings || [], 
                                 status: a.status || 'completed',
                                 dateAdded: a.dateAdded || new Date().toISOString()
@@ -2971,7 +2933,7 @@
                                     categories: m.categories || [m.category], 
                                     rating: m.rating, 
                                     song: m.song, 
-                                    image: await uploadImageToStorage(m.image), 
+                                    image: m.image, 
                                     status: m.status || 'completed',
                                     dateAdded: m.dateAdded || new Date().toISOString()
                                 });
