@@ -1559,6 +1559,7 @@
 
         let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
         let migratingImages = false; // evita solapar varias pasadas de migración de imágenes a Storage
+        let migrationPromise = null;
         const queryShare = new URLSearchParams(window.location.search).get('share');
         const hostHash = window.parent !== window ? window.parent.location.hash : window.location.hash;
         const isSharedView = Boolean(queryShare) || hostHash.startsWith('#share=');
@@ -1831,78 +1832,67 @@
             return await getDownloadURL(fileRef);
         }
 
-        // Ejecuta una promesa con un límite de tiempo: si no resuelve/rechaza en `ms`,
-        // se rechaza igualmente con un error claro. Evita que una sola petición colgada
-        // (red lenta, reglas de Storage mal configuradas...) bloquee toda la migración.
-        function withTimeout(promise, ms, label) {
-            return Promise.race([
-                promise,
-                new Promise((_, reject) => setTimeout(() => reject(new Error(`timeout (${ms}ms) en ${label}`)), ms))
-            ]);
-        }
-
         // Migración silenciosa y perezosa: recorre los animes/películas del usuario ya
         // cargados y, para los que todavía tengan la imagen en base64 (formato antiguo),
         // la sube a Storage y actualiza solo ese campo en Firestore. Se ejecuta cada vez
         // que llegan datos nuevos por onSnapshot, pero no hace nada si no queda ningún
-        // pendiente, así que es barata de llamar repetidamente.
-        //
-        // Corre con varias imágenes en paralelo (no una a una) y con timeout por petición,
-        // así que una imagen que se atasque no bloquea a las demás: el resto sigue
-        // avanzando y esa imagen concreta simplemente cuenta como fallida y se
-        // reintentará en la siguiente carga (sigue en base64, sigue funcionando en local).
+        // pendiente, así que es barata de llamar repetidamente. Un fallo puntual en una
+        // imagen no aborta el resto ni afecta al uso normal de la app: esa imagen se
+        // queda como estaba (sigue funcionando en local) y se reintentará más adelante.
         async function migrateLocalImages() {
-            if (migratingImages || !state.currentUser) return;
-            if (!window.isSecureContext || !window.crypto?.subtle) {
-                console.error('[v0] migración de imágenes deshabilitada: hace falta HTTPS (crypto.subtle no disponible en este origen)');
-                return;
-            }
+            if (!state.currentUser) return migrationPromise;
+            if (migrationPromise) return migrationPromise;
             const uid = state.currentUser.uid;
             const pending = [
-                ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:')).map(a => ({ item: a, ref: 'animes' })),
-                ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:')).map(m => ({ item: m, ref: 'movies' }))
+                ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:image/')).map(item => ({ item, ref: 'animes' })),
+                ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:image/')).map(item => ({ item, ref: 'movies' }))
             ];
-            const total = pending.length;
-            if (total === 0) return;
+            if (!pending.length) return;
 
-            migratingImages = true;
-            console.log(`[v0] migración de imágenes: ${total} pendientes`);
-            let done = 0, migrated = 0, failed = 0;
-            updateSyncStatus(`Optimizando imágenes… (0/${total})`, 'syncing');
-
-            const CONCURRENCY = 4; // varias subidas a la vez, sin saturar Storage/Firestore
-            let cursor = 0;
-            async function worker() {
-                while (cursor < pending.length) {
-                    const idx = cursor++;
-                    const { item, ref } = pending[idx];
+            migrationPromise = (async () => {
+                migratingImages = true;
+                updateSyncStatus('Optimizando imágenes…', 'syncing');
+                let failed = 0;
+                for (const { item, ref } of pending) {
                     try {
-                        const url = await withTimeout(uploadImageToStorage(item.image), 20000, `subida de "${item.name}"`);
-                        if (url && url !== item.image) {
-                            await withTimeout(
-                                setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true }),
-                                15000,
-                                `guardado de "${item.name}"`
-                            );
-                            migrated++;
+                        const oldImage = item.image;
+                        const url = await uploadImageToStorage(oldImage);
+                        if (url && url !== oldImage) {
+                            item.image = url; // actualiza también el estado local antes de compartir
+                            await setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true });
                         }
                     } catch (err) {
                         failed++;
                         console.error('[v0] migración de imagen fallida para', item.name, err);
-                    } finally {
-                        done++;
-                        updateSyncStatus(`Optimizando imágenes… (${done}/${total})`, 'syncing');
                     }
                 }
-            }
-
-            try {
-                await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
-            } finally {
+                updateSyncStatus(failed ? 'Sincronizado (algunas imágenes pendientes)' : 'Sincronizado', '');
+            })().finally(() => {
                 migratingImages = false;
-                updateSyncStatus(failed ? `Sincronizado (${failed} imágenes pendientes)` : 'Sincronizado', '');
-                console.log(`[v0] migración terminada: ${migrated} migradas, ${failed} fallidas de ${total}`);
+                migrationPromise = null;
+            });
+            return migrationPromise;
+        }
+
+        // Garantiza que un enlace nuevo nunca pierda imágenes antiguas aunque el snapshot
+        // todavía no haya terminado de migrarlas.
+        async function getShareItemAsync(item) {
+            const clean = getShareItem(item);
+            if (clean.image) return clean;
+            if (typeof item.image === 'string' && item.image.startsWith('data:image/')) {
+                try {
+                    const url = await uploadImageToStorage(item.image);
+                    if (url) {
+                        item.image = url;
+                        clean.image = url;
+                        if (state.currentUser) {
+                            const ref = state.animes.includes(item) ? 'animes' : 'movies';
+                            await setDoc(doc(db, 'users', state.currentUser.uid, ref, item.id), { image: url }, { merge: true });
+                        }
+                    }
+                } catch (err) { console.error('[v0] imagen omitida del enlace', item.name, err); }
             }
+            return clean;
         }
 
         function escapeHtml(s) {
@@ -2816,12 +2806,17 @@
             const button = document.querySelector('[onclick="shareCompleted()"]');
             if (button) { button.disabled = true; button.textContent = 'Creando enlace…'; }
             try {
+                // Espera la migración iniciada por onSnapshot y vuelve a resolver cada
+                // imagen: así los datos antiguos nunca se convierten en tarjetas sin imagen.
+                await migrateLocalImages();
+                const completedAnimes = state.animes.filter(i => (i.status || 'completed') === 'completed');
+                const completedMovies = state.movies.filter(i => (i.status || 'completed') === 'completed');
                 const data = {
-                    version: 4,
+                    version: 5,
                     owner: state.currentUser.displayName || state.currentUser.email || 'Usuario de ANIMKER',
                     createdAt: new Date().toISOString(),
-                    animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
-                    movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
+                    animes: await Promise.all(completedAnimes.map(getShareItemAsync)),
+                    movies: await Promise.all(completedMovies.map(getShareItemAsync))
                 };
                 // El enlace es autónomo: no depende de permisos, cuotas ni reglas de Firestore.
                 const encoded = await encodeShareData(data);
@@ -2940,7 +2935,7 @@
                                 rating: a.rating, 
                                 season: a.season, 
                                 episode: a.episode, 
-                                image: a.image, 
+                                image: await uploadImageToStorage(a.image), 
                                 openings: a.openings || [], 
                                 status: a.status || 'completed',
                                 dateAdded: a.dateAdded || new Date().toISOString()
@@ -2957,7 +2952,7 @@
                                     categories: m.categories || [m.category], 
                                     rating: m.rating, 
                                     song: m.song, 
-                                    image: m.image, 
+                                    image: await uploadImageToStorage(m.image), 
                                     status: m.status || 'completed',
                                     dateAdded: m.dateAdded || new Date().toISOString()
                                 });
