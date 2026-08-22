@@ -1510,6 +1510,7 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDcDE85PgFjFZZEqT258trf166ECX-FRgI",
@@ -1523,6 +1524,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
 
         // State - consolidated
@@ -1556,6 +1558,7 @@
         };
 
         let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
+        let migratingImages = false; // evita solapar varias pasadas de migración de imágenes a Storage
         const queryShare = new URLSearchParams(window.location.search).get('share');
         const hostHash = window.parent !== window ? window.parent.location.hash : window.location.hash;
         const isSharedView = Boolean(queryShare) || hostHash.startsWith('#share=');
@@ -1786,6 +1789,83 @@
             reader.readAsDataURL(file);
         }
 
+        // ---- Subida de imágenes a Firebase Storage (con deduplicación por contenido) ----
+        //
+        // Las imágenes se comprimen siempre a JPEG en el <canvas> (compressImageElement).
+        // Antes se guardaban tal cual como data:image/... en Firestore, lo que inflaba
+        // los enlaces de compartir. Ahora, justo antes de guardar el item, se suben a
+        // Storage y solo se guarda la URL pública (mucho más ligera).
+        //
+        // Deduplicación: el nombre de archivo es el hash SHA-256 del propio contenido de
+        // la imagen. Así, si dos títulos (del mismo usuario o de usuarios distintos)
+        // acaban con exactamente el mismo recorte/imagen, apuntan al mismo archivo en
+        // Storage en vez de subir una copia nueva cada vez.
+
+        function dataUrlToBytes(dataUrl) {
+            const base64 = dataUrl.split(',')[1] || '';
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes;
+        }
+
+        async function hashBytes(bytes) {
+            const digest = await crypto.subtle.digest('SHA-256', bytes);
+            return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Devuelve la URL pública de la imagen en Storage. Si ya existe un archivo con
+        // ese mismo hash, lo reutiliza (no sube nada). Si no existe, lo sube una vez.
+        // Si dataUrl ya es una URL http(s) (imagen ya migrada) o está vacía, la devuelve tal cual.
+        async function uploadImageToStorage(dataUrl) {
+            if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
+            const bytes = dataUrlToBytes(dataUrl);
+            const hash = await hashBytes(bytes);
+            const fileRef = storageRef(storage, `images/${hash}.jpg`);
+            try {
+                return await getDownloadURL(fileRef); // ya existe -> se reutiliza, sin duplicados
+            } catch (err) {
+                if (err?.code !== 'storage/object-not-found') throw err;
+            }
+            await uploadBytes(fileRef, bytes, { contentType: 'image/jpeg' });
+            return await getDownloadURL(fileRef);
+        }
+
+        // Migración silenciosa y perezosa: recorre los animes/películas del usuario ya
+        // cargados y, para los que todavía tengan la imagen en base64 (formato antiguo),
+        // la sube a Storage y actualiza solo ese campo en Firestore. Se ejecuta cada vez
+        // que llegan datos nuevos por onSnapshot, pero no hace nada si no queda ningún
+        // pendiente, así que es barata de llamar repetidamente. Un fallo puntual en una
+        // imagen no aborta el resto ni afecta al uso normal de la app: esa imagen se
+        // queda como estaba (sigue funcionando en local) y se reintentará más adelante.
+        async function migrateLocalImages() {
+            if (migratingImages || !state.currentUser) return;
+            const uid = state.currentUser.uid;
+            const pending = [
+                ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:')).map(a => ({ item: a, ref: 'animes' })),
+                ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:')).map(m => ({ item: m, ref: 'movies' }))
+            ];
+            if (pending.length === 0) return;
+
+            migratingImages = true;
+            updateSyncStatus('Optimizando imágenes…', 'syncing');
+            let migrated = 0, failed = 0;
+            for (const { item, ref } of pending) {
+                try {
+                    const url = await uploadImageToStorage(item.image);
+                    if (url && url !== item.image) {
+                        await setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true });
+                        migrated++;
+                    }
+                } catch (err) {
+                    failed++;
+                    console.error('[v0] migración de imagen fallida para', item.name, err);
+                }
+            }
+            migratingImages = false;
+            updateSyncStatus(failed ? 'Sincronizado (algunas imágenes pendientes)' : 'Sincronizado', failed ? '' : '');
+        }
+
         function escapeHtml(s) {
             return (s || '').replace(/[&<>"']/g, c => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -2008,6 +2088,7 @@
                 render();
                 updateStats();
                 updateSyncStatus('Sincronizado', '');
+                migrateLocalImages();
             });
 
             unsubscribeMovies = onSnapshot(collection(db, 'users', uid, 'movies'), snap => {
@@ -2022,6 +2103,7 @@
                 updateSectionCounts();
                 render();
                 updateStats();
+                migrateLocalImages();
             });
         }
 
@@ -2268,6 +2350,14 @@
             }
 
             try {
+                if (data.image) {
+                    try { data.image = await uploadImageToStorage(data.image); }
+                    catch (imgErr) {
+                        // Si falla la subida (permisos, sin red...) seguimos guardando con la
+                        // imagen en base64 como hasta ahora: nunca bloqueamos el guardado del item.
+                        console.error('[v0] no se pudo subir la imagen, se guarda en local', imgErr);
+                    }
+                }
                 await setDoc(doc(db, 'users', state.currentUser.uid, ref, Date.now().toString()), data);
                 // Reset form
                 dom.itemName.value = '';
@@ -2410,6 +2500,12 @@
             }
 
             try {
+                if (data.image) {
+                    try { data.image = await uploadImageToStorage(data.image); }
+                    catch (imgErr) {
+                        console.error('[v0] no se pudo subir la imagen, se guarda en local', imgErr);
+                    }
+                }
                 await setDoc(doc(db, 'users', state.currentUser.uid, ref, state.currentEditId), data);
                 updateSyncStatus('Guardado', '');
                 closeEditModal();
