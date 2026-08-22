@@ -1831,39 +1831,78 @@
             return await getDownloadURL(fileRef);
         }
 
+        // Ejecuta una promesa con un límite de tiempo: si no resuelve/rechaza en `ms`,
+        // se rechaza igualmente con un error claro. Evita que una sola petición colgada
+        // (red lenta, reglas de Storage mal configuradas...) bloquee toda la migración.
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`timeout (${ms}ms) en ${label}`)), ms))
+            ]);
+        }
+
         // Migración silenciosa y perezosa: recorre los animes/películas del usuario ya
         // cargados y, para los que todavía tengan la imagen en base64 (formato antiguo),
         // la sube a Storage y actualiza solo ese campo en Firestore. Se ejecuta cada vez
         // que llegan datos nuevos por onSnapshot, pero no hace nada si no queda ningún
-        // pendiente, así que es barata de llamar repetidamente. Un fallo puntual en una
-        // imagen no aborta el resto ni afecta al uso normal de la app: esa imagen se
-        // queda como estaba (sigue funcionando en local) y se reintentará más adelante.
+        // pendiente, así que es barata de llamar repetidamente.
+        //
+        // Corre con varias imágenes en paralelo (no una a una) y con timeout por petición,
+        // así que una imagen que se atasque no bloquea a las demás: el resto sigue
+        // avanzando y esa imagen concreta simplemente cuenta como fallida y se
+        // reintentará en la siguiente carga (sigue en base64, sigue funcionando en local).
         async function migrateLocalImages() {
             if (migratingImages || !state.currentUser) return;
+            if (!window.isSecureContext || !window.crypto?.subtle) {
+                console.error('[v0] migración de imágenes deshabilitada: hace falta HTTPS (crypto.subtle no disponible en este origen)');
+                return;
+            }
             const uid = state.currentUser.uid;
             const pending = [
                 ...state.animes.filter(a => typeof a.image === 'string' && a.image.startsWith('data:')).map(a => ({ item: a, ref: 'animes' })),
                 ...state.movies.filter(m => typeof m.image === 'string' && m.image.startsWith('data:')).map(m => ({ item: m, ref: 'movies' }))
             ];
-            if (pending.length === 0) return;
+            const total = pending.length;
+            if (total === 0) return;
 
             migratingImages = true;
-            updateSyncStatus('Optimizando imágenes…', 'syncing');
-            let migrated = 0, failed = 0;
-            for (const { item, ref } of pending) {
-                try {
-                    const url = await uploadImageToStorage(item.image);
-                    if (url && url !== item.image) {
-                        await setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true });
-                        migrated++;
+            console.log(`[v0] migración de imágenes: ${total} pendientes`);
+            let done = 0, migrated = 0, failed = 0;
+            updateSyncStatus(`Optimizando imágenes… (0/${total})`, 'syncing');
+
+            const CONCURRENCY = 4; // varias subidas a la vez, sin saturar Storage/Firestore
+            let cursor = 0;
+            async function worker() {
+                while (cursor < pending.length) {
+                    const idx = cursor++;
+                    const { item, ref } = pending[idx];
+                    try {
+                        const url = await withTimeout(uploadImageToStorage(item.image), 20000, `subida de "${item.name}"`);
+                        if (url && url !== item.image) {
+                            await withTimeout(
+                                setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true }),
+                                15000,
+                                `guardado de "${item.name}"`
+                            );
+                            migrated++;
+                        }
+                    } catch (err) {
+                        failed++;
+                        console.error('[v0] migración de imagen fallida para', item.name, err);
+                    } finally {
+                        done++;
+                        updateSyncStatus(`Optimizando imágenes… (${done}/${total})`, 'syncing');
                     }
-                } catch (err) {
-                    failed++;
-                    console.error('[v0] migración de imagen fallida para', item.name, err);
                 }
             }
-            migratingImages = false;
-            updateSyncStatus(failed ? 'Sincronizado (algunas imágenes pendientes)' : 'Sincronizado', failed ? '' : '');
+
+            try {
+                await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+            } finally {
+                migratingImages = false;
+                updateSyncStatus(failed ? `Sincronizado (${failed} imágenes pendientes)` : 'Sincronizado', '');
+                console.log(`[v0] migración terminada: ${migrated} migradas, ${failed} fallidas de ${total}`);
+            }
         }
 
         function escapeHtml(s) {
