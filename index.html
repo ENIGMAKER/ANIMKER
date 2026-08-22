@@ -1818,18 +1818,30 @@
         // Devuelve la URL pública de la imagen en Storage. Si ya existe un archivo con
         // ese mismo hash, lo reutiliza (no sube nada). Si no existe, lo sube una vez.
         // Si dataUrl ya es una URL http(s) (imagen ya migrada) o está vacía, la devuelve tal cual.
+        function withTimeout(promise, ms, label) {
+            let timer;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(label + '_timeout')), ms);
+            });
+            return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+        }
+
         async function uploadImageToStorage(dataUrl) {
             if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
             const bytes = dataUrlToBytes(dataUrl);
-            const hash = await hashBytes(bytes);
+            if (!bytes.length) throw new Error('empty_image');
+            const hash = await withTimeout(hashBytes(bytes), 15000, 'image_hash');
             const fileRef = storageRef(storage, `images/${hash}.jpg`);
             try {
-                return await getDownloadURL(fileRef); // ya existe -> se reutiliza, sin duplicados
+                return await withTimeout(getDownloadURL(fileRef), 15000, 'image_lookup');
             } catch (err) {
-                if (err?.code !== 'storage/object-not-found') throw err;
+                // Firebase may report the missing object with either code depending on
+                // the SDK/runtime. Only then proceed with the upload.
+                const missing = err?.code === 'storage/object-not-found' || /object.not.found|image_lookup_timeout/i.test(err?.message || '');
+                if (!missing) throw err;
             }
-            await uploadBytes(fileRef, bytes, { contentType: 'image/jpeg' });
-            return await getDownloadURL(fileRef);
+            await withTimeout(uploadBytes(fileRef, bytes, { contentType: 'image/jpeg' }), 30000, 'image_upload');
+            return await withTimeout(getDownloadURL(fileRef), 15000, 'image_url');
         }
 
         // Migración silenciosa y perezosa: recorre los animes/películas del usuario ya
@@ -1851,22 +1863,29 @@
 
             migrationPromise = (async () => {
                 migratingImages = true;
-                updateSyncStatus('Optimizando imágenes…', 'syncing');
+                const total = pending.length;
+                let completed = 0;
                 let failed = 0;
+                updateSyncStatus(`Optimizando imágenes… 0/${total}`, 'syncing');
                 for (const { item, ref } of pending) {
                     try {
                         const oldImage = item.image;
                         const url = await uploadImageToStorage(oldImage);
                         if (url && url !== oldImage) {
                             item.image = url; // actualiza también el estado local antes de compartir
-                            await setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true });
+                            await withTimeout(setDoc(doc(db, 'users', uid, ref, item.id), { image: url }, { merge: true }), 20000, 'image_save');
                         }
                     } catch (err) {
                         failed++;
                         console.error('[v0] migración de imagen fallida para', item.name, err);
+                    } finally {
+                        completed++;
+                        updateSyncStatus(`Optimizando imágenes… ${completed}/${total}`, 'syncing');
+                        // Cede el hilo para que el contador y la interfaz se repinten.
+                        await new Promise(resolve => setTimeout(resolve, 0));
                     }
                 }
-                updateSyncStatus(failed ? 'Sincronizado (algunas imágenes pendientes)' : 'Sincronizado', '');
+                updateSyncStatus(failed ? `Sincronizado (${failed} pendientes)` : 'Sincronizado', '');
             })().finally(() => {
                 migratingImages = false;
                 migrationPromise = null;
