@@ -1556,7 +1556,9 @@
         };
 
         let unsubscribeAnimes = null, unsubscribeCategories = null, unsubscribeMovies = null;
-        const isSharedView = window.location.hash.startsWith('#share=');
+        const queryShare = new URLSearchParams(window.location.search).get('share');
+        const hostHash = window.parent !== window ? window.parent.location.hash : window.location.hash;
+        const isSharedView = Boolean(queryShare) || hostHash.startsWith('#share=');
 
         // DOM Cache for performance
         const dom = {};
@@ -1613,6 +1615,12 @@
             loadTheme();
             setupMobileNav();
             if (isSharedView) renderSharedView();
+        window.addEventListener('message', (event) => {
+            if (event.origin === window.location.origin && event.data?.type === 'animker-share' && typeof event.data.hash === 'string') {
+                const value = event.data.hash.slice('#share='.length).trim();
+                if (value) renderSharedView(value);
+            }
+        });
         });
 
         function cacheDom() {
@@ -2635,16 +2643,20 @@
             }).join('');
         }
 
-        function encodeShareData(data) {
-            const bytes = new TextEncoder().encode(JSON.stringify(data));
+        async function encodeShareData(data) {
+            const input = new TextEncoder().encode(JSON.stringify(data));
+            const stream = new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'));
+            const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
             let binary = '';
-            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            compressed.forEach(byte => binary += String.fromCharCode(byte));
             return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         }
 
-        function decodeShareData(value) {
+        async function decodeShareData(value) {
             const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
-            return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+            return JSON.parse(new TextDecoder().decode(await new Response(stream).arrayBuffer()));
         }
 
         function getShareItem(item) {
@@ -2659,7 +2671,7 @@
                 episode: Number.isFinite(Number(item.episode)) ? Number(item.episode) : 1,
                 openings: Array.isArray(item.openings) ? item.openings.filter(Number.isFinite).map(Number) : [],
                 song: typeof item.song === 'string' ? item.song : '',
-                image: typeof item.image === 'string' && item.image.length < 900000 ? item.image : ''
+                image: typeof item.image === 'string' && /^https?:\/\//i.test(item.image) ? item.image : ''
             };
             return clean;
         }
@@ -2668,21 +2680,21 @@
             if (!state.currentUser) return;
             const button = document.querySelector('[onclick="shareCompleted()"]');
             if (button) { button.disabled = true; button.textContent = 'Creando enlace…'; }
-            const data = {
-                version: 3,
-                owner: state.currentUser.displayName || state.currentUser.email || 'Usuario de ANIMKER',
-                createdAt: new Date().toISOString(),
-                animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
-                movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
-            };
-            const shareId = crypto.randomUUID().replaceAll('-', '').slice(0, 16);
             try {
-                // Firestore necesita que el documento sea completamente serializable.
-                await setDoc(doc(db, 'sharedLists', shareId), JSON.parse(JSON.stringify(data)));
-                const url = location.href.split('#')[0] + '#share=' + shareId;
-                try {
-                    await navigator.clipboard.writeText(url);
-                } catch {
+                const data = {
+                    version: 4,
+                    owner: state.currentUser.displayName || state.currentUser.email || 'Usuario de ANIMKER',
+                    createdAt: new Date().toISOString(),
+                    animes: state.animes.filter(i => (i.status || 'completed') === 'completed').map(getShareItem),
+                    movies: state.movies.filter(i => (i.status || 'completed') === 'completed').map(getShareItem)
+                };
+                // El enlace es autónomo: no depende de permisos, cuotas ni reglas de Firestore.
+                const encoded = await encodeShareData(data);
+                const publicBase = window.parent !== window ? window.parent.location.href.split('#')[0] : location.href.split('#')[0];
+                const url = publicBase + '#share=' + encoded;
+                if (url.length > 120000) throw new Error('SHARE_TOO_LARGE');
+                try { await navigator.clipboard.writeText(url); }
+                catch {
                     const input = document.createElement('textarea');
                     input.value = url; input.style.position = 'fixed'; input.style.opacity = '0';
                     document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
@@ -2690,26 +2702,24 @@
                 alert('Enlace copiado. Cualquier persona podrá abrirlo sin registrarse.');
             } catch (error) {
                 console.error('[v0] share creation error', error);
-                alert('No se pudo crear el enlace. Revisa que Firestore permita crear documentos en “sharedLists”.');
+                alert(error.message === 'SHARE_TOO_LARGE' ? 'La lista es demasiado grande para un enlace. Reduce imágenes locales.' : 'No se pudo crear el enlace.');
             } finally {
                 if (button) { button.disabled = false; button.textContent = 'Compartir completados'; }
             }
         }
 
-        async function renderSharedView() {
-            const shareId = location.hash.slice('#share='.length).trim();
+        async function renderSharedView(sharedValue = '') {
+            const encoded = (sharedValue || new URLSearchParams(location.search).get('share') || location.hash.slice('#share='.length)).trim();
             const showError = () => {
                 document.querySelector('.header')?.remove();
                 document.querySelector('.main')?.remove();
                 dom.loginOverlay.style.display = 'none';
                 dom.sharedView.style.display = 'block';
-                dom.sharedView.innerHTML = '<div class="panel shared-empty"><h3>Enlace no válido</h3><p>Este enlace de compartir está incompleto o ha caducado.</p></div>';
+                dom.sharedView.innerHTML = '<div class="panel shared-empty"><h3>Enlace no válido</h3><p>Este enlace está incompleto o dañado.</p></div>';
             };
             try {
-                if (!/^[a-zA-Z0-9]{16}$/.test(shareId)) return showError();
-                const sharedDoc = await getDoc(doc(db, 'sharedLists', shareId));
-                if (!sharedDoc.exists()) return showError();
-                const payload = sharedDoc.data();
+                if (!encoded || encoded.length > 120000) return showError();
+                const payload = await decodeShareData(encoded);
                 const items = [...(payload.animes || []).map(i => ({ ...i, kind: 'Anime' })), ...(payload.movies || []).map(i => ({ ...i, kind: 'Película' }))];
                 document.querySelector('.header')?.remove();
                 document.querySelector('.main')?.remove();
