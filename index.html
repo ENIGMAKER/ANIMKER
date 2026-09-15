@@ -1137,6 +1137,18 @@
     </style>
 </head>
 <body>
+    <div id="sharedView" style="display:none; min-height:100vh;">
+        <main class="main">
+            <div class="panel" style="max-width:900px; margin:40px auto;">
+                <div class="panel-header">
+                    <div><h1 class="panel-title">Lista compartida de anime</h1><p class="panel-subtitle" id="sharedSubtitle"></p></div>
+                    <a class="btn btn-outline btn-sm" href="./">Crear mi lista</a>
+                </div>
+                <div class="cards-grid" id="sharedCards"></div>
+            </div>
+        </main>
+    </div>
+
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <h1>ANIMKER</h1>
@@ -1200,6 +1212,7 @@
                 </div>
                 <button class="btn btn-outline btn-sm" onclick="togglePanel('categoryManager')">Categorias</button>
                 <button class="btn btn-outline btn-sm" onclick="togglePanel('backupPanel')">Backup</button>
+                <button class="btn btn-outline btn-sm" onclick="shareAnimeList()">Compartir lista</button>
                 <button class="btn btn-sm" id="btnAdd" onclick="togglePanel('addPanel')">+ Nuevo</button>
             </div>
         </div>
@@ -1549,7 +1562,7 @@
         // DOM Cache for performance
         const dom = {};
         const domIds = [
-            'loginOverlay', 'userAvatar', 'syncStatus', 'syncText', 'themeIcon',
+            'loginOverlay', 'sharedView', 'sharedCards', 'sharedSubtitle', 'userAvatar', 'syncStatus', 'syncText', 'themeIcon',
             'mobileNav', 'tabAnimes', 'tabMovies', 'tabAnimesMobile', 'tabMoviesMobile',
             'searchInput', 'categoryFilter', 'cardsGrid', 'listView', 'categoryBar',
             'categoryList', 'newCategoryChips', 'editCategoryChips', 'newOpenings', 'editOpenings',
@@ -1593,12 +1606,15 @@
         window.selectOnlineImage = selectOnlineImage;
         window.onCropSliderInput = onCropSliderInput;
         window.toggleQuickStatus = toggleQuickStatus;
+        window.shareAnimeList = shareAnimeList;
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
             cacheDom();
             loadTheme();
             setupMobileNav();
+            const sharedItems = getSharedListFromUrl();
+            if (sharedItems) renderSharedView(sharedItems);
         });
 
         function cacheDom() {
@@ -1643,7 +1659,7 @@
                 loadData();
             } else {
                 state.currentUser = null;
-                dom.loginOverlay.style.display = 'flex';
+                if (!getSharedListFromUrl()) dom.loginOverlay.style.display = 'flex';
                 [unsubscribeAnimes, unsubscribeCategories, unsubscribeMovies].forEach(fn => fn?.());
             }
         });
@@ -1758,6 +1774,44 @@
                 img.src = ev.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        function encodeSharedList(items) {
+            const json = JSON.stringify(items.map(item => ({ n: item.name || '', r: Number(item.rating) || 0 })));
+            const bytes = new TextEncoder().encode(json);
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        function decodeSharedList(value) {
+            try {
+                const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
+                return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
+            } catch (_) { return []; }
+        }
+
+        function getSharedListFromUrl() {
+            const match = location.hash.match(/^#lista=([A-Za-z0-9_-]+)$/);
+            return match ? decodeSharedList(match[1]) : null;
+        }
+
+        async function shareAnimeList() {
+            const items = state.animes.filter(item => item.status === 'completed' || item.status === 'watching');
+            if (!items.length) { alert('Añade algún anime completado o que estés viendo para compartirlo.'); return; }
+            const url = location.href.split('#')[0] + '#lista=' + encodeSharedList(items);
+            try { await navigator.clipboard.writeText(url); alert('Enlace corto copiado al portapapeles.'); }
+            catch (_) { prompt('Copia este enlace para compartir tu lista:', url); }
+        }
+
+        function renderSharedView(items) {
+            document.body.classList.remove('dark');
+            dom.loginOverlay.style.display = 'none';
+            document.querySelector('header').style.display = 'none';
+            document.querySelector('body > main').style.display = 'none';
+            dom.sharedView.style.display = 'block';
+            dom.sharedSubtitle.textContent = items.length + ' anime compartido' + (items.length === 1 ? '' : 's');
+            dom.sharedCards.innerHTML = items.map(item => `<article class="card"><div class="card-body"><h2 class="card-title">${escapeHtml(item.n)}</h2><div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > item.r ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${item.r ? item.r + '/5 estrellas' : 'Sin valoración'}</div></div></article>`).join('');
         }
 
         function escapeHtml(s) {
@@ -1937,9 +1991,26 @@
 
             el.parentElement.querySelectorAll('.img-search-item').forEach(x => x.classList.remove('selected'));
             el.classList.add('selected');
-            statusEl.textContent = 'Procesando y comprimiendo imagen...';
+            statusEl.textContent = 'Cargando imagen...';
 
             try {
+                // Start with the original result immediately. When its host allows CORS,
+                // the crop UI appears as soon as the browser decodes the thumbnail.
+                const quickImg = await new Promise((resolve, reject) => {
+                    const i = new Image();
+                    i.crossOrigin = 'anonymous';
+                    i.onload = () => resolve(i);
+                    i.onerror = () => reject(new Error('quick_load_failed'));
+                    i.src = url;
+                });
+                try {
+                    setSourceImage(type, quickImg);
+                    statusEl.textContent = 'Imagen lista. Ajusta la altura del recorte con el control deslizante si quieres.';
+                    return;
+                } catch (_) {
+                    statusEl.textContent = 'Preparando imagen...';
+                }
+
                 const img = await loadCorsImage(url);
                 setSourceImage(type, img);
                 statusEl.textContent = 'Imagen lista. Ajusta la altura del recorte con el control deslizante si quieres.';
