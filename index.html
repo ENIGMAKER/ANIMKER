@@ -1353,13 +1353,13 @@
                 </div>
             </div>
 
-            <div class="form-group" id="formatOptions" style="margin-bottom: 20px;">
-                <label class="form-label">Formato</label>
-                <div class="chips">
-                    <label class="chip"><input type="checkbox" id="itemIsAnime"> Anime</label>
-                    <label class="chip" id="mangaOption" style="display:none"><input type="checkbox" id="itemIsManga"> Manga</label>
+                <div class="form-group" id="formatOptions" style="margin-bottom: 20px;">
+                    <label class="form-label">Formato</label>
+                    <div class="chips">
+                        <label class="chip" id="animeOption"><input type="checkbox" id="itemIsAnime"> Anime</label>
+                        <label class="chip" id="mangaOption" style="display:none"><input type="checkbox" id="itemIsManga"> Manga</label>
+                    </div>
                 </div>
-            </div>
             <div class="form-group" style="margin-bottom: 20px;">
                 <label class="form-label">Categorías</label>
                 <div class="chips" id="newCategoryChips"></div>
@@ -1375,8 +1375,12 @@
             </div>
 
             <div class="form-group" id="songGroup" style="margin-bottom: 20px; display: none;">
-                <label class="form-label">Cancion favorita</label>
-                <input type="text" class="form-input" id="itemSong" placeholder="Nombre de la cancion...">
+                <label class="form-label">Canción favorita</label>
+                <input type="text" class="form-input" id="itemSong" placeholder="Nombre de la canción...">
+            </div>
+            <div class="form-group" id="shortLinkGroup" style="margin-bottom: 20px; display:none;">
+                <label class="form-label" for="itemExternalUrl">Enlace del corto</label>
+                <input type="url" class="form-input" id="itemExternalUrl" placeholder="https://youtube.com/...">
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
@@ -1445,6 +1449,13 @@
                         <input type="number" class="form-input" id="editEpisode" min="0">
                     </div>
                 </div>
+                <div class="form-group" id="editFormatOptions" style="margin-bottom: 16px;">
+                    <label class="form-label">Formato</label>
+                    <div class="chips">
+                        <label class="chip" id="editAnimeOption"><input type="checkbox" id="editIsAnime"> Anime</label>
+                        <label class="chip" id="editMangaOption" style="display:none"><input type="checkbox" id="editIsManga"> Manga</label>
+                    </div>
+                </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label class="form-label">Valoracion</label>
@@ -1490,8 +1501,12 @@
                 </div>
 
                 <div class="form-group" id="editSongGroup" style="margin-bottom: 16px; display: none;">
-                    <label class="form-label">Cancion favorita</label>
+                    <label class="form-label">Canción favorita</label>
                     <input type="text" class="form-input" id="editSong">
+                </div>
+                <div class="form-group" id="editShortLinkGroup" style="margin-bottom: 16px; display:none;">
+                    <label class="form-label" for="editExternalUrl">Enlace del corto</label>
+                    <input type="url" class="form-input" id="editExternalUrl" placeholder="https://youtube.com/...">
                 </div>
 
                 <div class="form-group">
@@ -1552,6 +1567,7 @@
             editRatingValue: 0,
             currentEditId: null,
             currentEditType: null,
+            currentEditSection: null,
             newImage: null,
             editImageData: null,
             newImgSource: null,
@@ -1835,6 +1851,17 @@
             }[c]));
         }
 
+        function sanitizeExternalUrl(value) {
+            const input = (value || '').trim();
+            if (!input) return null;
+            try {
+                const url = new URL(input);
+                return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
         // Loads a remote image as a CORS-clean element. Instead of assigning the proxy URL
         // straight to an <img> (which fails silently and can leave the canvas "tainted"),
         // we fetch the raw bytes ourselves and build a local blob: URL from them - a blob:
@@ -1888,8 +1915,10 @@
             const btn = type === 'new' ? dom.searchImageBtn : dom.editSearchImageBtn;
 
             const query = nameEl.value.trim();
+            const contentSection = type === 'new' ? state.currentContentType : state.currentEditSection;
+            const isAnimeSearch = contentSection !== 'books' && (type === 'new' ? document.getElementById('itemIsAnime').checked : document.getElementById('editIsAnime').checked);
             if (!query) {
-                alert('Escribe primero el nombre del anime o pelicula');
+                alert('Escribe primero el nombre del elemento');
                 nameEl.focus();
                 return;
             }
@@ -1900,27 +1929,14 @@
             statusEl.textContent = 'Buscando imagenes para "' + query + '"...';
             btn.disabled = true;
 
-            const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-            // Fetches from Jikan, checking the HTTP status properly (a 429/500 response still
-            // returns valid JSON, so it must never be silently treated as "0 results").
-            async function fetchJikan(attempt = 1) {
-                const res = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=24&sfw=true');
-                if (res.status === 429 && attempt < 3) {
-                    // Rate limited by the shared public API - wait and retry a couple of times
-                    await sleep(1200 * attempt);
-                    return fetchJikan(attempt + 1);
-                }
-                if (!res.ok) {
-                    throw new Error('jikan_http_' + res.status);
-                }
+            async function fetchJikan() {
+                const res = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=12&sfw=true');
+                if (!res.ok) throw new Error('jikan_http_' + res.status);
                 const json = await res.json();
-                return (json.data || [])
-                    .map(a => ({
-                        url: (a.images && a.images.jpg && (a.images.jpg.large_image_url || a.images.jpg.image_url)) || '',
-                        title: a.title || query
-                    }))
-                    .filter(x => x.url);
+                return (json.data || []).map(a => ({
+                    url: a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || '',
+                    title: a.title || query
+                })).filter(item => item.url);
             }
 
             // Fallback source (AniList GraphQL) used if Jikan fails or has nothing,
@@ -1952,24 +1968,46 @@
                     .filter(x => x.url);
             }
 
+            async function fetchOtherImages() {
+                if (contentSection === 'books') {
+                    const response = await fetch('https://openlibrary.org/search.json?title=' + encodeURIComponent(query) + '&limit=12');
+                    if (!response.ok) throw new Error('openlibrary_http_' + response.status);
+                    const json = await response.json();
+                    return (json.docs || []).filter(book => book.cover_i).map(book => ({
+                        url: 'https://covers.openlibrary.org/b/id/' + book.cover_i + '-L.jpg',
+                        title: book.title || query
+                    }));
+                }
+                if (contentSection === 'series') {
+                    const response = await fetch('https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(query));
+                    if (!response.ok) throw new Error('tvmaze_http_' + response.status);
+                    const json = await response.json();
+                    return json.slice(0, 12).map(entry => ({ url: entry.show?.image?.original || entry.show?.image?.medium || '', title: entry.show?.name || query })).filter(item => item.url);
+                }
+                const entity = contentSection === 'movies' ? 'movie' : 'movie';
+                const response = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&entity=' + entity + '&limit=12');
+                if (!response.ok) throw new Error('itunes_http_' + response.status);
+                const json = await response.json();
+                return (json.results || []).map(result => ({
+                    url: result.artworkUrl600 || result.artworkUrl100 || '',
+                    title: result.trackName || query
+                })).filter(item => item.url);
+            }
+
             try {
                 let items = [];
                 let sourceError = null;
-
                 try {
-                    items = await fetchJikan();
-                } catch (err) {
-                    console.warn('[v0] Jikan failed, trying AniList fallback:', err.message);
-                    sourceError = err;
-                }
-
-                if (!items.length) {
-                    try {
-                        items = await fetchAniList();
-                    } catch (err) {
-                        console.warn('[v0] AniList fallback also failed:', err.message);
-                        if (!sourceError) sourceError = err;
+                    if (isAnimeSearch) {
+                        try { items = await fetchAniList(); } catch (error) { sourceError = error; }
+                        if (!items.length) {
+                            try { items = await fetchJikan(); } catch (error) { sourceError = sourceError || error; }
+                        }
+                    } else {
+                        items = await fetchOtherImages();
                     }
+                } catch (err) {
+                    sourceError = err;
                 }
 
                 if (!items.length) {
@@ -2197,15 +2235,17 @@
             });
             const isSeries = type === 'series';
             const isBook = type === 'books';
+            const isShort = type === 'shorts';
             const titles = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
             dom.addPanelTitle.textContent = 'Nuevo ' + (titles[type] || 'elemento');
             dom.seasonGroup.style.display = isSeries ? 'block' : 'none';
             dom.episodeGroup.style.display = isSeries ? 'block' : 'none';
             dom.openingsGroup.style.display = isSeries ? 'block' : 'none';
-            dom.songGroup.style.display = isSeries ? 'none' : 'block';
+            dom.songGroup.style.display = type === 'movies' ? 'block' : 'none';
             document.getElementById('itemIsAnime').checked = false;
             document.getElementById('itemIsAnime').parentElement.style.display = isBook ? 'none' : 'inline-flex';
             document.getElementById('mangaOption').style.display = isBook ? 'inline-flex' : 'none';
+            document.getElementById('shortLinkGroup').style.display = isShort ? 'block' : 'none';
             dom.btnAdd.textContent = '+ ' + (titles[type] || 'Nuevo');
 
             renderCategoryBar();
@@ -2309,7 +2349,12 @@
         async function addItem() {
             const name = dom.itemName.value.trim();
             if (!name || state.selectedCategories.length === 0 || state.currentRating === 0) {
-                alert('Completa nombre, categoria y valoracion');
+                alert('Completa nombre, categoría y valoración');
+                return;
+            }
+            const shortUrlInput = document.getElementById('itemExternalUrl').value.trim();
+            if (state.currentContentType === 'shorts' && shortUrlInput && !sanitizeExternalUrl(shortUrlInput)) {
+                alert('Escribe un enlace válido que comience con http:// o https://');
                 return;
             }
 
@@ -2326,15 +2371,16 @@
                 rating: state.currentRating,
                 status: state.newStatus,
                 contentSection: state.currentContentType,
-                isAnime: state.currentContentType === 'books' ? false : document.getElementById('itemIsAnime').checked,
+                isAnime: state.currentContentType !== 'books' && document.getElementById('itemIsAnime').checked,
                 isManga: state.currentContentType === 'books' && document.getElementById('itemIsManga').checked,
+                externalUrl: state.currentContentType === 'shorts' ? sanitizeExternalUrl(document.getElementById('itemExternalUrl').value) : null,
                 image: state.newImage || null,
                 dateAdded: new Date().toISOString()
             };
 
-            if (isMovie) {
+            if (state.currentContentType === 'movies') {
                 data.song = dom.itemSong.value.trim() || null;
-            } else {
+            } else if (!isMovie) {
                 data.season = parseInt(dom.itemSeason.value) || 1;
                 data.episode = parseInt(dom.itemEpisode.value) || 1;
                 data.openings = [...state.currentOpenings];
@@ -2348,6 +2394,7 @@
                 dom.itemSeason.value = '1';
                 dom.itemEpisode.value = '1';
                 dom.itemSong.value = '';
+                dom.itemExternalUrl.value = '';
                 dom.itemImage.value = '';
                 dom.newImagePreview.style.display = 'none';
                 dom.imageSearchResults.style.display = 'none';
@@ -2403,22 +2450,33 @@
             const item = items.find(i => i.id === id);
             if (!item) return;
 
+            const contentSection = item.contentSection || (type === 'anime' ? 'series' : 'movies');
+            const isSeries = contentSection === 'series';
+            const isBook = contentSection === 'books';
             state.currentEditId = id;
             state.currentEditType = type;
+            state.currentEditSection = contentSection;
             state.editRatingValue = item.rating;
             state.editSelectedCategories = [...(item.categories || [])];
             state.editImageData = item.image || null;
             state.editOpenings = item.openings ? [...item.openings] : [];
             state.editStatus = item.status || 'completed';
 
-            dom.editModalTitle.textContent = type === 'anime' ? 'Editar Anime' : 'Editar Pelicula';
+            const sectionLabels = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
+            dom.editModalTitle.textContent = 'Editar ' + (item.isAnime ? 'Anime · ' : '') + (sectionLabels[contentSection] || 'elemento');
             dom.editName.value = item.name;
             dom.editSubName.value = item.subName || '';
-            dom.editSeasonEpisode.style.display = type === 'anime' ? 'grid' : 'none';
-            dom.editOpeningsGroup.style.display = type === 'anime' ? 'block' : 'none';
-            dom.editSongGroup.style.display = type === 'movie' ? 'block' : 'none';
+            dom.editSeasonEpisode.style.display = isSeries ? 'grid' : 'none';
+            dom.editOpeningsGroup.style.display = isSeries ? 'block' : 'none';
+            dom.editSongGroup.style.display = contentSection === 'movies' ? 'block' : 'none';
+            document.getElementById('editAnimeOption').style.display = isBook ? 'none' : 'inline-flex';
+            document.getElementById('editMangaOption').style.display = isBook ? 'inline-flex' : 'none';
+            document.getElementById('editIsAnime').checked = Boolean(item.isAnime);
+            document.getElementById('editIsManga').checked = Boolean(item.isManga);
+            document.getElementById('editShortLinkGroup').style.display = contentSection === 'shorts' ? 'block' : 'none';
+            document.getElementById('editExternalUrl').value = item.externalUrl || '';
 
-            if (type === 'anime') {
+            if (isSeries) {
                 dom.editSeason.value = item.season || 1;
                 dom.editEpisode.value = item.episode || 1;
             } else {
@@ -2452,7 +2510,12 @@
         async function saveEdit() {
             const name = dom.editName.value.trim();
             if (!name || state.editSelectedCategories.length === 0 || state.editRatingValue === 0) {
-                alert('Completa nombre, categoria y valoracion');
+                alert('Completa nombre, categoría y valoración');
+                return;
+            }
+            const editUrlInput = document.getElementById('editExternalUrl').value.trim();
+            if (state.currentEditSection === 'shorts' && editUrlInput && !sanitizeExternalUrl(editUrlInput)) {
+                alert('Escribe un enlace válido que comience con http:// o https://');
                 return;
             }
 
@@ -2471,17 +2534,18 @@
                 rating: state.editRatingValue,
                 status: state.editStatus,
                 contentSection: original?.contentSection || (state.currentEditType === 'anime' ? 'series' : 'movies'),
-                isAnime: original?.isAnime || false,
-                isManga: original?.isManga || false,
+                isAnime: document.getElementById('editIsAnime').checked,
+                isManga: document.getElementById('editIsManga').checked,
+                externalUrl: original?.contentSection === 'shorts' ? sanitizeExternalUrl(document.getElementById('editExternalUrl').value) : original?.externalUrl || null,
                 image: state.editImageData,
                 dateAdded: original?.dateAdded || new Date().toISOString()
             };
 
-            if (state.currentEditType === 'anime') {
+            if (state.currentEditSection === 'series') {
                 data.season = parseInt(dom.editSeason.value) || 1;
                 data.episode = parseInt(dom.editEpisode.value) || 1;
                 data.openings = [...state.editOpenings];
-            } else {
+            } else if (state.currentEditSection === 'movies') {
                 data.song = dom.editSong.value.trim() || null;
             }
 
@@ -2504,6 +2568,8 @@
             dom.editImagePreview.style.display = 'none';
             state.currentEditId = null;
             state.currentEditType = null;
+            state.currentEditSection = null;
+            document.getElementById('editExternalUrl').value = '';
             state.editRatingValue = 0;
             state.editSelectedCategories = [];
             state.editOpenings = [];
@@ -2645,8 +2711,9 @@
         }
 
         function renderGrid(items) {
-            const isMovie = state.currentContentType === 'movies';
-            const type = isMovie ? 'movie' : 'anime';
+            const isSeries = state.currentContentType === 'series';
+            const type = isSeries ? 'anime' : 'movie';
+            const sectionNames = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
 
             if (!items.length) {
                 dom.cardsGrid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><h3>Sin resultados</h3><p>Prueba con otros filtros o anade uno nuevo</p></div>`;
@@ -2659,9 +2726,9 @@
                 const status = item.status || 'completed';
                 
                 let extra = '';
-                if (isMovie && item.song) {
-                    extra = `<div class="card-extra"><strong>Cancion:</strong> ${item.song}</div>`;
-                } else if (!isMovie) {
+                if (!isSeries && item.song) {
+                    extra = `<div class="card-extra"><strong>Canción:</strong> ${escapeHtml(item.song)}</div>`;
+                } else if (isSeries) {
                     const openings = item.openings?.length ? item.openings.map(o => `T${o}`).join(', ') : 'Sin favoritos';
                     extra = `<div class="card-extra"><strong>Openings:</strong> ${openings}</div>`;
                 }
@@ -2671,12 +2738,13 @@
                         ${getQuickStatusMenu(type, item.id, status)}
                         ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image">` : `<div class="card-placeholder">Sin imagen</div>`}
                         <div class="card-body">
-                            ${isMovie ? '<div class="card-badges"><span class="card-badge">Pelicula</span></div>' : ''}
-                            <h3 class="card-title">${getStatusDot(status)} ${item.name}</h3>
+                            <div class="card-badges"><span class="card-badge">${sectionNames[item.contentSection || (isSeries ? 'series' : 'movies')] || 'Elemento'}</span>${item.isAnime ? '<span class="card-badge">Anime</span>' : ''}${item.isManga ? '<span class="card-badge">Manga</span>' : ''}</div>
+                            <h3 class="card-title">${getStatusDot(status)} ${escapeHtml(item.name)}</h3>
                             <div class="card-categories">${cats}</div>
-                            ${!isMovie ? `<p class="card-meta">T${item.season} - Ep. ${item.episode}</p>` : ''}
+                            ${isSeries && item.season != null && item.episode != null ? `<p class="card-meta">T${item.season} - Ep. ${item.episode}</p>` : ''}
                             <div class="card-stars">${stars}</div>
                             ${extra}
+                            ${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir corto ↗</a>` : ''}
                             <div class="card-actions">
                                 <button class="btn btn-outline btn-sm" onclick="editItem('${type}', '${item.id}')">Editar</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteItem('${type}', '${item.id}')">Eliminar</button>
@@ -2688,8 +2756,8 @@
         }
 
         function renderList(items) {
-            const isMovie = state.currentContentType === 'movies';
-            const type = isMovie ? 'movie' : 'anime';
+            const isSeries = state.currentContentType === 'series';
+            const type = isSeries ? 'anime' : 'movie';
 
             if (!items.length) {
                 dom.listView.innerHTML = `<div class="empty-state"><h3>Sin resultados</h3><p>Prueba con otros filtros o anade uno nuevo</p></div>`;
@@ -2698,7 +2766,9 @@
 
             dom.listView.innerHTML = items.map(item => {
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
-                const meta = isMovie ? (item.song || 'Sin cancion') : `T${item.season} - Ep. ${item.episode}`;
+                const meta = isSeries && item.season != null && item.episode != null
+                    ? `T${item.season} - Ep. ${item.episode}`
+                    : (item.isAnime ? 'Anime' : item.isManga ? 'Manga' : item.contentSection === 'shorts' ? 'Corto' : item.contentSection === 'books' ? 'Libro' : (item.song || ''));
                 const status = item.status || 'completed';
 
                 return `
@@ -2713,6 +2783,7 @@
                         </div>
                         <div class="list-stars">${stars}</div>
                         <div class="list-actions">
+                            ${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}
                             <button class="btn btn-outline btn-sm" onclick="editItem('${type}', '${item.id}')">Editar</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteItem('${type}', '${item.id}')">Eliminar</button>
                         </div>
