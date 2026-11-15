@@ -2164,10 +2164,13 @@
             }
             dom.categoryBar.style.display = 'flex';
 
-            const items = state.currentContentType === 'animes' ? state.animes : state.movies;
+            const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
+            const sectionItems = baseItems.filter(item =>
+                (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType
+            );
             const filteredBySection = state.currentSection === 'all'
-                ? items
-                : items.filter(i => (i.status || 'completed') === state.currentSection);
+                ? sectionItems
+                : sectionItems.filter(i => (i.status || 'completed') === state.currentSection);
 
             dom.categoryBar.innerHTML =
                 `<div class="category-chip ${state.currentCategory === 'all' ? 'active' : ''}" onclick="selectCategory('all')">Todas <span class="chip-count">${filteredBySection.length}</span></div>` +
@@ -2236,27 +2239,26 @@
         }
 
         async function removeCategory(name) {
-            if (!confirm(`Eliminar "${name}"?`)) return;
-            state.categories = state.categories.filter(c => c !== name);
-            
-            const toDelete = { animes: [], movies: [] };
-            ['animes', 'movies'].forEach(type => {
-                const arr = state[type];
-                arr.forEach(item => {
-                    if ((item.categories || []).length === 1 && item.categories[0] === name) {
-                        toDelete[type].push(item);
-                    }
-                });
-                state[type] = arr.filter(i => !((i.categories || []).length === 1 && i.categories[0] === name));
-                state[type].forEach(i => i.categories = (i.categories || []).filter(c => c !== name));
-            });
-
+            if (!confirm(`¿Eliminar la categoría "${name}"? Los elementos se conservarán.`)) return;
+            state.categories = state.categories.filter(category => category !== name);
             const uid = state.currentUser.uid;
-            await Promise.all([
-                ...toDelete.animes.map(a => deleteDoc(doc(db, 'users', uid, 'animes', a.id))),
-                ...toDelete.movies.map(m => deleteDoc(doc(db, 'users', uid, 'movies', m.id))),
-                saveCategories()
-            ]);
+            const updates = [];
+            ['animes', 'movies'].forEach(type => {
+                state[type].forEach(item => {
+                    const categories = (item.categories || []).filter(category => category !== name);
+                    if (categories.length === (item.categories || []).length) return;
+                    item.categories = categories;
+                    const { id, ...data } = item;
+                    updates.push(setDoc(doc(db, 'users', uid, type, id), data));
+                });
+            });
+            await Promise.all(updates);
+            await saveCategories();
+            renderCategoryList();
+            renderCategoryChips();
+            updateCategorySelect();
+            renderCategoryBar();
+            render();
         }
 
         async function saveCategories() {
