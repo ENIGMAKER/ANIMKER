@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANIMKER</title>
+    <title>NAKERTIVE · Tu biblioteca personal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1114,6 +1114,10 @@
         .status-option.selected[data-status="completed"] { border-color: var(--completed); background: rgba(34, 197, 94, 0.1); }
 
         /* Responsive */
+        .nav-tabs { flex-wrap: wrap; }
+        #itemIsAnime, #itemIsManga { accent-color: var(--accent); width: 15px; height: 15px; }
+        .chips label.chip { display: inline-flex; align-items: center; gap: 7px; }
+
         @media (max-width: 768px) {
             .header-content { padding: 0 16px; }
             .header-center { display: none; }
@@ -1151,8 +1155,8 @@
 
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
-            <h1>ANIMKER</h1>
-            <p>Tu biblioteca personal de anime y peliculas.<br>Sincronizada en todos tus dispositivos.</p>
+            <h1>NAKERTIVE</h1>
+            <p>Tu biblioteca personal de series, películas, cortos y libros.<br>Organizada y sincronizada en todos tus dispositivos.</p>
             <button class="btn" onclick="signInWithGoogle()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Continuar con Google
@@ -1162,11 +1166,13 @@
 
     <header class="header">
         <div class="header-content">
-            <div class="logo">ANIMKER</div>
+            <div class="logo">NAKERTIVE</div>
             <div class="header-center">
                 <nav class="nav-tabs">
-                    <button class="nav-tab active" id="tabAnimes" onclick="switchContentType('animes')">Animes</button>
-                    <button class="nav-tab" id="tabMovies" onclick="switchContentType('movies')">Peliculas</button>
+                    <button class="nav-tab active" id="tabAnimes" onclick="switchContentType('series')">Series</button>
+                    <button class="nav-tab" id="tabMovies" onclick="switchContentType('movies')">Películas</button>
+                    <button class="nav-tab" onclick="switchContentType('shorts')">Cortos</button>
+                    <button class="nav-tab" onclick="switchContentType('books')">Libros</button>
                 </nav>
             </div>
             <div class="header-right">
@@ -1186,8 +1192,10 @@
     <main class="main">
         <!-- Mobile Nav -->
         <div class="nav-tabs" style="margin-bottom: 20px; display: none;" id="mobileNav">
-            <button class="nav-tab active" id="tabAnimesMobile" onclick="switchContentType('animes')">Animes</button>
-            <button class="nav-tab" id="tabMoviesMobile" onclick="switchContentType('movies')">Peliculas</button>
+            <button class="nav-tab active" id="tabAnimesMobile" onclick="switchContentType('series')">Series</button>
+            <button class="nav-tab" id="tabMoviesMobile" onclick="switchContentType('movies')">Películas</button>
+            <button class="nav-tab" onclick="switchContentType('shorts')">Cortos</button>
+            <button class="nav-tab" onclick="switchContentType('books')">Libros</button>
         </div>
 
         <!-- Toolbar -->
@@ -1345,8 +1353,15 @@
                 </div>
             </div>
 
+            <div class="form-group" id="formatOptions" style="margin-bottom: 20px;">
+                <label class="form-label">Formato</label>
+                <div class="chips">
+                    <label class="chip"><input type="checkbox" id="itemIsAnime"> Anime</label>
+                    <label class="chip" id="mangaOption" style="display:none"><input type="checkbox" id="itemIsManga"> Manga</label>
+                </div>
+            </div>
             <div class="form-group" style="margin-bottom: 20px;">
-                <label class="form-label">Categorias</label>
+                <label class="form-label">Categorías</label>
                 <div class="chips" id="newCategoryChips"></div>
             </div>
 
@@ -1552,7 +1567,7 @@
             selectedCategories: [],
             editSelectedCategories: [],
             isDarkMode: false,
-            currentContentType: 'animes',
+            currentContentType: 'series',
             newStatus: 'completed',
             editStatus: 'completed'
         };
@@ -2077,7 +2092,8 @@
         }
 
         function updateSectionCounts() {
-            const items = state.currentContentType === 'animes' ? state.animes : state.movies;
+            const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
+            const items = baseItems.filter(item => (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType);
             dom.countAll.textContent = items.length;
             dom.countWatching.textContent = items.filter(i => i.status === 'watching').length;
             dom.countPlanned.textContent = items.filter(i => i.status === 'planned').length;
@@ -2171,16 +2187,23 @@
 
         function switchContentType(type) {
             state.currentContentType = type;
-            [dom.tabAnimes, dom.tabAnimesMobile].forEach(el => el?.classList.toggle('active', type === 'animes'));
-            [dom.tabMovies, dom.tabMoviesMobile].forEach(el => el?.classList.toggle('active', type === 'movies'));
-            
-            const isMovie = type === 'movies';
-            dom.addPanelTitle.textContent = isMovie ? 'Nueva Pelicula' : 'Nuevo Anime';
-            dom.seasonGroup.style.display = isMovie ? 'none' : 'block';
-            dom.episodeGroup.style.display = isMovie ? 'none' : 'block';
-            dom.openingsGroup.style.display = isMovie ? 'none' : 'block';
-            dom.songGroup.style.display = isMovie ? 'block' : 'none';
-            dom.btnAdd.textContent = isMovie ? '+ Pelicula' : '+ Anime';
+            document.querySelectorAll('.nav-tab').forEach(el => {
+                const label = el.textContent.trim().toLowerCase();
+                const key = label === 'series' ? 'series' : label === 'películas' ? 'movies' : label === 'cortos' ? 'shorts' : label === 'libros' ? 'books' : '';
+                el.classList.toggle('active', key === type);
+            });
+            const isSeries = type === 'series';
+            const isBook = type === 'books';
+            const titles = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
+            dom.addPanelTitle.textContent = 'Nuevo ' + (titles[type] || 'elemento');
+            dom.seasonGroup.style.display = isSeries ? 'block' : 'none';
+            dom.episodeGroup.style.display = isSeries ? 'block' : 'none';
+            dom.openingsGroup.style.display = isSeries ? 'block' : 'none';
+            dom.songGroup.style.display = isSeries ? 'none' : 'block';
+            document.getElementById('itemIsAnime').checked = false;
+            document.getElementById('itemIsAnime').parentElement.style.display = isBook ? 'none' : 'inline-flex';
+            document.getElementById('mangaOption').style.display = isBook ? 'inline-flex' : 'none';
+            dom.btnAdd.textContent = '+ ' + (titles[type] || 'Nuevo');
 
             renderCategoryBar();
             updateSectionCounts();
@@ -2292,7 +2315,7 @@
             dom.addItemBtn.textContent = 'Guardando...';
             updateSyncStatus('Guardando...', 'syncing');
 
-            const isMovie = state.currentContentType === 'movies';
+            const isMovie = ['movies', 'shorts', 'books'].includes(state.currentContentType);
             const ref = isMovie ? 'movies' : 'animes';
             const data = {
                 name,
@@ -2300,6 +2323,9 @@
                 categories: [...state.selectedCategories],
                 rating: state.currentRating,
                 status: state.newStatus,
+                contentSection: state.currentContentType,
+                isAnime: state.currentContentType === 'books' ? false : document.getElementById('itemIsAnime').checked,
+                isManga: state.currentContentType === 'books' && document.getElementById('itemIsManga').checked,
                 image: state.newImage || null,
                 dateAdded: new Date().toISOString()
             };
@@ -2442,6 +2468,9 @@
                 categories: [...state.editSelectedCategories],
                 rating: state.editRatingValue,
                 status: state.editStatus,
+                contentSection: original?.contentSection || (state.currentEditType === 'anime' ? 'series' : 'movies'),
+                isAnime: original?.isAnime || false,
+                isManga: original?.isManga || false,
                 image: state.editImageData,
                 dateAdded: original?.dateAdded || new Date().toISOString()
             };
@@ -2541,9 +2570,11 @@
 
         // Render - optimized
         function getFilteredItems() {
-            let items = state.currentContentType === 'animes' ? state.animes : state.movies;
+            let items = ['series'].includes(state.currentContentType) ? state.animes : state.movies;
+            const legacySection = state.currentContentType === 'series' ? 'series' : 'movies';
+            items = items.filter(item => (item.contentSection || legacySection) === state.currentContentType);
             
-            // Filter by section
+            // Filter by status section
             if (state.currentSection !== 'all') {
                 items = items.filter(i => (i.status || 'completed') === state.currentSection);
             }
