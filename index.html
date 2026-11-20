@@ -193,6 +193,9 @@
             cursor: pointer;
             transition: all 0.15s;
         }
+    </style>
+</head>
+        }
 
         .nav-tab:hover { color: var(--text); }
         .nav-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
@@ -281,7 +284,8 @@
             transition: all 0.15s;
         }
 
-        .search-input:focus {
+        .search-input:focus,
+        .search-input:focus-visible {
             outline: none;
             border-color: var(--accent);
         }
@@ -302,7 +306,8 @@
             background-position: right 10px center;
         }
 
-        .select:focus { outline: none; border-color: var(--accent); }
+        .select:focus,
+        .select:focus-visible { outline: none; border-color: var(--accent); }
 
         .view-toggle {
             display: flex;
@@ -393,14 +398,15 @@
         .form-input {
             padding: 10px 12px;
             font-size: 14px;
-            background: var(--bg);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             color: var(--text);
             transition: all 0.15s;
         }
 
-        .form-input:focus { outline: none; border-color: var(--accent); }
+        .form-input:focus,
+        .form-input:focus-visible { outline: none; border-color: var(--accent); }
         .form-input::placeholder { color: var(--muted); }
 
         /* Stars */
@@ -411,13 +417,12 @@
 
         .star {
             font-size: 20px;
-            color: var(--border);
+            color: var(--muted);
             cursor: pointer;
             transition: color 0.1s;
             line-height: 1;
         }
-
-        .star.active { color: var(--star); }
+        .star.active,
         .star:hover { color: var(--star); }
 
         /* Chips */
@@ -439,8 +444,16 @@
             color: var(--text-secondary);
         }
 
-        .chip:hover { border-color: var(--accent); }
-        .chip.selected { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+        .chip:hover,
+        .chip:focus-visible {
+            border-color: var(--accent);
+        }
+
+        .chip.selected {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
 
         .chip-remove {
             display: inline-flex;
@@ -479,8 +492,16 @@
             color: var(--text-secondary);
         }
 
-        .section-tab:hover { border-color: var(--muted); background: var(--surface-hover); }
-        .section-tab.active { border-color: var(--accent); color: var(--text); }
+        .section-tab:hover,
+        .section-tab:focus-visible {
+            border-color: var(--muted);
+            background: var(--surface-hover);
+        }
+
+        .section-tab.active {
+            border-color: var(--accent);
+            color: var(--text);
+        }
 
         .section-tab .count {
             padding: 2px 8px;
@@ -489,7 +510,10 @@
             border-radius: var(--radius-full);
         }
 
-        .section-tab.active .count { background: var(--accent); color: var(--accent-text); }
+        .section-tab.active .count {
+            background: var(--accent);
+            color: var(--accent-text);
+        }
 
         .section-tab[data-section="watching"] .indicator { background: var(--watching); }
         .section-tab[data-section="planned"] .indicator { background: var(--planned); }
@@ -526,8 +550,16 @@
             color: var(--text-secondary);
         }
 
-        .category-chip:hover { border-color: var(--muted); }
-        .category-chip.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+        .category-chip:hover,
+        .category-chip:focus-visible {
+            border-color: var(--muted);
+        }
+
+        .category-chip.active {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
 
         .category-chip .chip-count {
             display: inline-flex;
@@ -563,9 +595,11 @@
             overflow: hidden;
             transition: all 0.2s;
             position: relative;
+            will-change: transform, box-shadow;
         }
 
-        .card:hover {
+        .card:hover,
+        .card:focus-visible {
             box-shadow: var(--shadow-lg);
             transform: translateY(-2px);
         }
@@ -599,7 +633,9 @@
         }
 
         .card-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             padding: 3px 10px;
             font-size: 11px;
             font-weight: 600;
@@ -622,6 +658,7 @@
             display: flex;
             align-items: center;
             gap: 7px;
+        }
         }
 
         .card-status-dot {
@@ -854,6 +891,11 @@
             display: none;
             position: fixed;
             inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
             background: rgba(0,0,0,0.5);
             z-index: 100;
             backdrop-filter: blur(4px);
@@ -899,6 +941,7 @@
         }
 
         .modal-close:hover { background: var(--surface-hover); color: var(--text); }
+        .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
         .modal-body { padding: 24px; }
 
@@ -922,7 +965,8 @@
             position: relative;
         }
 
-        .file-drop:hover { border-color: var(--accent); }
+        .file-drop:hover,
+        .file-drop:focus-within { border-color: var(--accent); }
 
         .file-drop input {
             position: absolute;
@@ -1093,6 +1137,21 @@
         }
 
         .status-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .status-option:hover,
+        .status-option.active {
+            background: var(--surface-hover);
+            border-color: var(--accent);
+        }
             display: flex;
             align-items: center;
             gap: 6px;
@@ -1107,11 +1166,14 @@
             color: var(--text-secondary);
         }
 
-        .status-option:hover { border-color: var(--muted); }
+        .status-option:hover { border-color: var(--muted, #ccc); }
         .status-option.selected { border-color: var(--accent); color: var(--text); }
         .status-option.selected[data-status="watching"] { border-color: var(--watching); background: rgba(59, 130, 246, 0.1); }
         .status-option.selected[data-status="planned"] { border-color: var(--planned); background: rgba(139, 92, 246, 0.1); }
         .status-option.selected[data-status="completed"] { border-color: var(--completed); background: rgba(34, 197, 94, 0.1); }
+
+        /* Global box-sizing */
+        *, *::before, *::after { box-sizing: border-box; }
 
         /* Responsive */
         .nav-tabs { flex-wrap: wrap; }
@@ -1153,11 +1215,11 @@
         </main>
     </div>
 
-    <div class="login-overlay" id="loginOverlay">
+    <div class="login-overlay" id="loginOverlay" role="dialog" aria-modal="true">
         <div class="login-card">
             <h1>NAKERTIVE</h1>
             <p>Tu biblioteca personal de series, películas, cortos y libros.<br>Organizada y sincronizada en todos tus dispositivos.</p>
-            <button class="btn" onclick="signInWithGoogle()">
+            <button class="btn" type="button" onclick="signInWithGoogle()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Continuar con Google
             </button>
@@ -1168,11 +1230,11 @@
         <div class="header-content">
             <div class="logo">NAKERTIVE</div>
             <div class="header-center">
-                <nav class="nav-tabs">
-                    <button class="nav-tab active" id="tabAnimes" onclick="switchContentType('series')">Series</button>
-                    <button class="nav-tab" id="tabMovies" onclick="switchContentType('movies')">Películas</button>
-                    <button class="nav-tab" onclick="switchContentType('shorts')">Cortos</button>
-                    <button class="nav-tab" onclick="switchContentType('books')">Libros</button>
+                <nav class="nav-tabs" role="navigation">
+                    <button class="nav-tab active" id="tabAnimes" type="button" onclick="switchContentType('series')">Series</button>
+                    <button class="nav-tab" id="tabMovies" type="button" onclick="switchContentType('movies')">Películas</button>
+                    <button class="nav-tab" type="button" onclick="switchContentType('shorts')">Cortos</button>
+                    <button class="nav-tab" type="button" onclick="switchContentType('books')">Libros</button>
                 </nav>
             </div>
             <div class="header-right">
@@ -1180,22 +1242,22 @@
                     <span class="sync-dot"></span>
                     <span id="syncText">Sincronizado</span>
                 </div>
-                <button class="theme-btn" id="themeBtn" onclick="toggleDarkMode()">
+                <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" onclick="toggleDarkMode()">
                     <span id="themeIcon">&#9789;</span>
                 </button>
                 <img id="userAvatar" class="user-avatar" src="/placeholder.svg" alt="Usuario">
-                <button class="btn btn-outline btn-sm" onclick="signOut()">Salir</button>
+                <button class="btn btn-outline btn-sm" type="button" onclick="signOut()">Salir</button>
             </div>
         </div>
     </header>
 
     <main class="main">
         <!-- Mobile Nav -->
-        <div class="nav-tabs" style="margin-bottom: 20px; display: none;" id="mobileNav">
-            <button class="nav-tab active" id="tabAnimesMobile" onclick="switchContentType('series')">Series</button>
-            <button class="nav-tab" id="tabMoviesMobile" onclick="switchContentType('movies')">Películas</button>
-            <button class="nav-tab" onclick="switchContentType('shorts')">Cortos</button>
-            <button class="nav-tab" onclick="switchContentType('books')">Libros</button>
+        <div class="nav-tabs" style="margin-bottom: 20px; display: none;" id="mobileNav" role="navigation">
+            <button class="nav-tab active" id="tabAnimesMobile" type="button" onclick="switchContentType('series')">Series</button>
+            <button class="nav-tab" id="tabMoviesMobile" type="button" onclick="switchContentType('movies')">Películas</button>
+            <button class="nav-tab" type="button" onclick="switchContentType('shorts')">Cortos</button>
+            <button class="nav-tab" type="button" onclick="switchContentType('books')">Libros</button>
         </div>
 
         <!-- Toolbar -->
@@ -1203,45 +1265,45 @@
             <div class="toolbar-left">
                 <div class="search-box">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar...">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar..." aria-label="Buscar anime o película">
                 </div>
                 <select class="select" id="categoryFilter">
-                    <option value="">Todas las categorias</option>
+                    <option value="">Todas las categorías</option>
                 </select>
             </div>
             <div class="toolbar-right">
                 <div class="view-toggle">
-                    <button class="view-btn active" onclick="switchView('grid')" title="Vista tarjetas">
+                    <button type="button" class="view-btn active" onclick="switchView('grid')" title="Vista tarjetas" aria-label="Vista tarjetas">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                     </button>
-                    <button class="view-btn" onclick="switchView('list')" title="Vista lista">
+                    <button type="button" class="view-btn" onclick="switchView('list')" title="Vista lista" aria-label="Vista lista">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
                     </button>
                 </div>
-                <button class="btn btn-outline btn-sm" onclick="togglePanel('categoryManager')">Categorias</button>
-                <button class="btn btn-outline btn-sm" onclick="togglePanel('backupPanel')">Backup</button>
-                <button class="btn btn-outline btn-sm" onclick="shareAnimeList()">Compartir lista</button>
-                <button class="btn btn-sm" id="btnAdd" onclick="togglePanel('addPanel')">+ Nuevo</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="togglePanel('categoryManager')">Categorías</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="togglePanel('backupPanel')">Copia de seguridad</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="shareAnimeList()">Compartir lista</button>
+                <button type="button" class="btn btn-sm" id="btnAdd" onclick="togglePanel('addPanel')">+ Nuevo</button>
             </div>
         </div>
 
         <!-- Section Tabs -->
         <div class="section-tabs" id="sectionTabs">
-            <button class="section-tab active" data-section="all" onclick="selectSection('all')">
+            <button type="button" class="section-tab active" data-section="all" onclick="selectSection('all')">
                 <span>Todos</span>
                 <span class="count" id="countAll">0</span>
             </button>
-            <button class="section-tab" data-section="watching" onclick="selectSection('watching')">
+            <button type="button" class="section-tab" data-section="watching" onclick="selectSection('watching')">
                 <span class="section-indicator" style="background: var(--watching);"></span>
                 <span>Viendo</span>
                 <span class="count" id="countWatching">0</span>
             </button>
-            <button class="section-tab" data-section="planned" onclick="selectSection('planned')">
+            <button type="button" class="section-tab" data-section="planned" onclick="selectSection('planned')">
                 <span class="section-indicator" style="background: var(--planned);"></span>
-                <span>Proximos</span>
+                <span>Próximos</span>
                 <span class="count" id="countPlanned">0</span>
             </button>
-            <button class="section-tab" data-section="completed" onclick="selectSection('completed')">
+            <button type="button" class="section-tab" data-section="completed" onclick="selectSection('completed')">
                 <span class="section-indicator" style="background: var(--completed);"></span>
                 <span>Completados</span>
                 <span class="count" id="countCompleted">0</span>
@@ -1252,8 +1314,8 @@
         <div class="panel" id="categoryManager" style="display: none;">
             <div class="panel-header">
                 <div>
-                    <h2 class="panel-title">Gestionar Categorias</h2>
-                    <p class="panel-subtitle">Las categorias se comparten entre animes y peliculas</p>
+                    <h2 class="panel-title">Gestionar categorías</h2>
+                    <p class="panel-subtitle">Las categorías se comparten entre animes y películas</p>
                 </div>
                 <div class="stats">
                     <div class="stat">
@@ -1262,17 +1324,17 @@
                     </div>
                     <div class="stat">
                         <div class="stat-value" id="totalMovies">0</div>
-                        <div class="stat-label">Peliculas</div>
+                        <div class="stat-label">Películas</div>
                     </div>
                     <div class="stat">
                         <div class="stat-value" id="totalCategories">0</div>
-                        <div class="stat-label">Categorias</div>
+                        <div class="stat-label">Categorías</div>
                     </div>
                 </div>
             </div>
             <div style="display: flex; gap: 12px;">
-                <input type="text" class="form-input" id="newCategory" placeholder="Nueva categoria..." style="flex: 1;">
-                <button class="btn" onclick="addCategory()">Anadir</button>
+                <input type="text" class="form-input" id="newCategory" placeholder="Nueva categoría..." style="flex: 1;" aria-label="Nueva categoría">
+                <button type="button" class="btn" onclick="addCategory()">Añadir</button>
             </div>
             <div class="category-list" id="categoryList"></div>
         </div>
@@ -1281,20 +1343,20 @@
         <div class="panel" id="backupPanel" style="display: none;">
             <div class="panel-header">
                 <div>
-                    <h2 class="panel-title">Copia de Seguridad</h2>
+                    <h2 class="panel-title">Copia de seguridad</h2>
                     <p class="panel-subtitle">Exporta o importa tus datos</p>
                 </div>
             </div>
             <div class="backup-actions">
-                <button class="btn" onclick="exportBackup()">
+                <button type="button" class="btn" onclick="exportBackup()" aria-label="Exportar datos">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                    Exportar Datos
+                    Exportar datos
                 </button>
                 <div style="position: relative;">
-                    <input type="file" id="importFile" accept=".json" onchange="importBackup(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
-                    <button class="btn btn-outline">
+                    <input type="file" id="importFile" accept=".json" onchange="importBackup(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;" aria-label="Seleccionar archivo de importación">
+                    <button type="button" class="btn btn-outline" aria-label="Importar datos">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                        Importar Datos
+                        Importar datos
                     </button>
                 </div>
             </div>
@@ -1308,58 +1370,59 @@
             
             <div class="form-grid" style="margin-bottom: 20px;">
                 <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label">Nombre</label>
-                    <input type="text" class="form-input" id="itemName" placeholder="Nombre...">
+                    <label class="form-label" for="itemName">Nombre</label>
+                    <input type="text" class="form-input" id="itemName" name="itemName" placeholder="Nombre…" required autocomplete="off">
                 </div>
                 <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label">Sub nombre <span style="color: var(--text-secondary); font-weight: 400;">(solo para buscar, no se muestra)</span></label>
-                    <input type="text" class="form-input" id="itemSubName" placeholder="Nombre alternativo en espanol...">
+                    <label class="form-label" for="itemSubName">Sub nombre <span style="color: var(--text-secondary); font-weight: 400;">(solo para buscar, no se muestra)</span></label>
+                    <input type="text" class="form-input" id="itemSubName" name="itemSubName" placeholder="Nombre alternativo en español…" autocomplete="off">
                 </div>
                 <div class="form-group" id="seasonGroup">
-                    <label class="form-label">Temporada</label>
-                    <input type="number" class="form-input" id="itemSeason" value="1" min="1">
+                    <label class="form-label" for="itemSeason">Temporada</label>
+                    <input type="number" class="form-input" id="itemSeason" name="itemSeason" value="1" min="1" required>
                 </div>
                 <div class="form-group" id="episodeGroup">
-                    <label class="form-label">Episodio</label>
-                    <input type="number" class="form-input" id="itemEpisode" value="1" min="0">
+                    <label class="form-label" for="itemEpisode">Episodio</label>
+                    <input type="number" class="form-input" id="itemEpisode" name="itemEpisode" value="1" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Valoracion</label>
-                    <div class="stars" id="newRating">
-                        <span class="star" data-rating="1">&#9733;</span>
-                        <span class="star" data-rating="2">&#9733;</span>
-                        <span class="star" data-rating="3">&#9733;</span>
-                        <span class="star" data-rating="4">&#9733;</span>
-                        <span class="star" data-rating="5">&#9733;</span>
+                    <label class="form-label">Valoración</label>
+                    <div class="stars" id="newRating" role="radiogroup" aria-label="Valoración">
+                        <button type="button" class="star" data-rating="1" aria-checked="false">★</button>
+                        <button type="button" class="star" data-rating="2" aria-checked="false">★</button>
+                        <button type="button" class="star" data-rating="3" aria-checked="false">★</button>
+                        <button type="button" class="star" data-rating="4" aria-checked="false">★</button>
+                        <button type="button" class="star" data-rating="5" aria-checked="false">★</button>
                     </div>
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
                 <label class="form-label">Estado</label>
-                <div class="status-select-group" id="newStatusGroup">
-                    <div class="status-option" data-status="watching" onclick="selectStatus('new', 'watching')">
+                <div class="status-select-group" id="newStatusGroup" role="radiogroup" aria-label="Estado">
+                    <div class="status-option" data-status="watching" onclick="selectStatus('new', 'watching')" role="radio" aria-checked="false">
                         <span class="section-indicator" style="background: var(--watching);"></span>
                         Viendo
                     </div>
-                    <div class="status-option" data-status="planned" onclick="selectStatus('new', 'planned')">
+                    <div class="status-option" data-status="planned" onclick="selectStatus('new', 'planned')" role="radio" aria-checked="false">
                         <span class="section-indicator" style="background: var(--planned);"></span>
-                        Proximo
+                        Próximo
                     </div>
-                    <div class="status-option selected" data-status="completed" onclick="selectStatus('new', 'completed')">
+                    <div class="status-option selected" data-status="completed" onclick="selectStatus('new', 'completed')" role="radio" aria-checked="true">
                         <span class="section-indicator" style="background: var(--completed);"></span>
                         Completado
                     </div>
                 </div>
             </div>
 
-                <div class="form-group" id="formatOptions" style="margin-bottom: 20px;">
-                    <label class="form-label">Formato</label>
-                    <div class="chips">
-                        <label class="chip" id="animeOption"><input type="checkbox" id="itemIsAnime"> Anime</label>
-                        <label class="chip" id="mangaOption" style="display:none"><input type="checkbox" id="itemIsManga"> Manga</label>
-                    </div>
+            <div class="form-group" id="formatOptions" style="margin-bottom: 20px;">
+                <label class="form-label">Formato</label>
+                <div class="chips">
+                    <label class="chip" id="animeOption"><input type="checkbox" id="itemIsAnime" name="itemIsAnime"> Anime</label>
+                    <label class="chip" id="mangaOption" style="display:none"><input type="checkbox" id="itemIsManga" name="itemIsManga"> Manga</label>
                 </div>
+            </div>
+
             <div class="form-group" style="margin-bottom: 20px;">
                 <label class="form-label">Categorías</label>
                 <div class="chips" id="newCategoryChips"></div>
@@ -1368,19 +1431,20 @@
             <div class="form-group" id="openingsGroup" style="margin-bottom: 20px;">
                 <label class="form-label">Openings favoritos</label>
                 <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <input type="number" class="form-input" id="newOpeningNum" placeholder="Temporada" min="1" style="width: 120px;">
-                    <button class="btn btn-outline btn-sm" onclick="addOpening('new')">Anadir</button>
+                    <input type="number" class="form-input" id="newOpeningNum" name="newOpeningNum" placeholder="Temporada" min="1" style="width: 120px;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addOpening('new')">Añadir</button>
                 </div>
                 <div class="chips" id="newOpenings"></div>
             </div>
 
             <div class="form-group" id="songGroup" style="margin-bottom: 20px; display: none;">
                 <label class="form-label">Canción favorita</label>
-                <input type="text" class="form-input" id="itemSong" placeholder="Nombre de la canción...">
+                <input type="text" class="form-input" id="itemSong" name="itemSong" placeholder="Nombre de la canción…">
             </div>
+
             <div class="form-group" id="shortLinkGroup" style="margin-bottom: 20px; display:none;">
                 <label class="form-label" for="itemExternalUrl">Enlace del corto</label>
-                <input type="url" class="form-input" id="itemExternalUrl" placeholder="https://youtube.com/...">
+                <input type="url" class="form-input" id="itemExternalUrl" name="itemExternalUrl" placeholder="https://youtube.com/…">
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
@@ -1394,20 +1458,21 @@
                 <div id="imageSearchStatus" class="img-search-status" style="display: none;"></div>
                 <div id="imageSearchResults" class="img-search-grid" style="display: none;"></div>
                 <div class="file-drop" style="margin-top: 12px;">
-                    <input type="file" id="itemImage" accept="image/*">
-                    <p>...o sube una imagen propia</p>
+                    <input type="file" id="itemImage" name="itemImage" accept="image/*">
+                    <p>…o sube una imagen propia</p>
                 </div>
-                <img id="newImagePreview" class="preview-img" style="display: none;">
+                <img id="newImagePreview" class="preview-img" alt="Vista previa de la imagen" style="display: none;"/>
+            </div
                 <div id="newCropRow" class="crop-row" style="display: none;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="m5 12 7 7 7-7" opacity="0"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="m5 12 7 7 7-7" opacity="0"/></svg>
                     <input type="range" id="newCropSlider" class="crop-slider" min="0" max="100" value="50" oninput="onCropSliderInput('new', this.value)">
                     <span class="crop-hint">Altura del recorte</span>
                 </div>
             </div>
 
             <div style="display: flex; gap: 12px;">
-                <button class="btn" onclick="addItem()" id="addItemBtn">Anadir</button>
-                <button class="btn btn-ghost" onclick="togglePanel('addPanel')">Cancelar</button>
+                <button type="button" class="btn" onclick="addItem()" id="addItemBtn">Añadir</button>
+                <button type="button" class="btn btn-ghost" onclick="togglePanel('addPanel')">Cancelar</button>
             </div>
         </div>
 
@@ -1423,48 +1488,49 @@
 
     <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal">
-        <div class="modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
             <div class="modal-header">
                 <h3 class="modal-title" id="editModalTitle">Editar</h3>
-                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                <button type="button" class="modal-close" onclick="closeEditModal()" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label class="form-label">Nombre</label>
-                    <input type="text" class="form-input" id="editName">
+                    <label class="form-label" for="editName">Nombre</label>
+                    <input type="text" class="form-input" id="editName" name="editName">
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label class="form-label">Sub nombre <span style="color: var(--text-secondary); font-weight: 400;">(solo para buscar, no se muestra)</span></label>
-                    <input type="text" class="form-input" id="editSubName" placeholder="Nombre alternativo en espanol...">
+                    <label class="form-label" for="editSubName">Sub nombre <span style="color: var(--text-secondary); font-weight: 400;">(solo para buscar, no se muestra)</span></label>
+                    <input type="text" class="form-input" id="editSubName" name="editSubName" placeholder="Nombre alternativo en español...">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;" id="editSeasonEpisode">
                     <div class="form-group">
-                        <label class="form-label">Temporada</label>
-                        <input type="number" class="form-input" id="editSeason" min="1">
+                        <label class="form-label" for="editSeason">Temporada</label>
+                        <input type="number" class="form-input" id="editSeason" name="editSeason" min="1">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Episodio</label>
-                        <input type="number" class="form-input" id="editEpisode" min="0">
+                        <label class="form-label" for="editEpisode">Episodio</label>
+                        <input type="number" class="form-input" id="editEpisode" name="editEpisode" min="0">
                     </div>
                 </div>
+
                 <div class="form-group" id="editFormatOptions" style="margin-bottom: 16px;">
                     <label class="form-label">Formato</label>
                     <div class="chips">
-                        <label class="chip" id="editAnimeOption"><input type="checkbox" id="editIsAnime"> Anime</label>
-                        <label class="chip" id="editMangaOption" style="display:none"><input type="checkbox" id="editIsManga"> Manga</label>
+                        <label class="chip" id="editAnimeOption"><input type="checkbox" id="editIsAnime" name="editIsAnime"> Anime</label>
+                        <label class="chip" id="editMangaOption" style="display:none"><input type="checkbox" id="editIsManga" name="editIsManga"> Manga</label>
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label class="form-label">Valoracion</label>
-                    <div class="stars" id="editRating">
-                        <span class="star" data-rating="1">&#9733;</span>
-                        <span class="star" data-rating="2">&#9733;</span>
-                        <span class="star" data-rating="3">&#9733;</span>
-                        <span class="star" data-rating="4">&#9733;</span>
-                        <span class="star" data-rating="5">&#9733;</span>
+                    <label class="form-label">Valoración</label>
+                    <div class="stars" id="editRating" role="radiogroup" aria-label="Valoración">
+                        <span class="star" data-rating="1" role="radio" tabindex="0">&#9733;</span>
+                        <span class="star" data-rating="2" role="radio" tabindex="0">&#9733;</span>
+                        <span class="star" data-rating="3" role="radio" tabindex="0">&#9733;</span>
+                        <span class="star" data-rating="4" role="radio" tabindex="0">&#9733;</span>
+                        <span class="star" data-rating="5" role="radio" tabindex="0">&#9733;</span>
                     </div>
                 </div>
 
@@ -1477,7 +1543,7 @@
                         </div>
                         <div class="status-option" data-status="planned" onclick="selectStatus('edit', 'planned')">
                             <span class="section-indicator" style="background: var(--planned);"></span>
-                            Proximo
+                            Próximo
                         </div>
                         <div class="status-option" data-status="completed" onclick="selectStatus('edit', 'completed')">
                             <span class="section-indicator" style="background: var(--completed);"></span>
@@ -1487,7 +1553,7 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label class="form-label">Categorias</label>
+                    <label class="form-label">Categorías</label>
                     <div class="chips" id="editCategoryChips"></div>
                 </div>
 
@@ -1495,13 +1561,18 @@
                     <label class="form-label">Openings favoritos</label>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                         <input type="number" class="form-input" id="editOpeningNum" placeholder="T#" min="1" style="width: 100px;">
-                        <button class="btn btn-outline btn-sm" onclick="addOpening('edit')">Anadir</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="addOpening('edit')">Añadir</button>
                     </div>
                     <div class="chips" id="editOpenings"></div>
                 </div>
 
                 <div class="form-group" id="editSongGroup" style="margin-bottom: 16px; display: none;">
-                    <label class="form-label">Canción favorita</label>
+                    <label class="form-label" for="editSong">Canción favorita</label>
+                    <input type="text" class="form-input" id="editSong" name="editSong" placeholder="Nombre de la canción...">
+                </div>
+            </div>
+        </div>
+    </div
                     <input type="text" class="form-input" id="editSong">
                 </div>
                 <div class="form-group" id="editShortLinkGroup" style="margin-bottom: 16px; display:none;">
@@ -1512,7 +1583,7 @@
                 <div class="form-group">
                     <label class="form-label">Imagen</label>
                     <div class="img-search-bar">
-                        <button type="button" class="btn btn-outline btn-sm" id="editSearchImageBtn" onclick="searchOnlineImages('edit')">
+                        <button type="button" class="btn btn-outline btn-sm" id="editSearchImageBtn" aria-label="Buscar imagen online por nombre" onclick="searchOnlineImages('edit')">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                             Buscar imagen online por nombre
                         </button>
@@ -1523,7 +1594,7 @@
                         <input type="file" id="editImage" accept="image/*">
                         <p>...o sube una imagen propia</p>
                     </div>
-                    <img id="editImagePreview" class="preview-img" style="display: none;">
+                    <img id="editImagePreview" class="preview-img" alt="Vista previa de la imagen" style="display: none;">
                     <div id="editCropRow" class="crop-row" style="display: none;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
                         <input type="range" id="editCropSlider" class="crop-slider" min="0" max="100" value="50" oninput="onCropSliderInput('edit', this.value)">
@@ -1532,8 +1603,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeEditModal()">Cancelar</button>
-                <button class="btn" onclick="saveEdit()" id="saveEditBtn">Guardar</button>
+                <button type="button" class="btn btn-ghost" aria-label="Cancelar edición" onclick="closeEditModal()">Cancelar</button>
+                <button type="button" class="btn" aria-label="Guardar cambios" onclick="saveEdit()" id="saveEditBtn">Guardar</button>
             </div>
         </div>
     </div>
@@ -1611,7 +1682,15 @@
         ];
 
         // Expose functions to window
-        window.signInWithGoogle = () => signInWithPopup(auth, provider).catch(() => alert('Error al iniciar sesion'));
+    </script>
+        window.signInWithGoogle = async () => {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (err) {
+                console.error('Error al iniciar sesión:', err);
+                alert('Error al iniciar sesión');
+            }
+        };
         window.signOut = () => firebaseSignOut(auth);
         window.toggleDarkMode = toggleDarkMode;
         window.switchContentType = switchContentType;
@@ -1649,87 +1728,115 @@
         });
 
         function cacheDom() {
-            domIds.forEach(id => dom[id] = document.getElementById(id));
+            domIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) console.warn(`Elemento con id "${id}" no encontrado`);
+                dom[id] = el;
+            });
         }
 
         function loadTheme() {
             state.isDarkMode = localStorage.getItem('animker-theme') === 'dark';
             if (state.isDarkMode) {
                 document.body.classList.add('dark');
-                dom.themeIcon.innerHTML = '&#9728;';
+                dom.themeIcon && (dom.themeIcon.innerHTML = '&#9728;');
             }
         }
 
         function toggleDarkMode() {
             state.isDarkMode = !state.isDarkMode;
             document.body.classList.toggle('dark', state.isDarkMode);
-            dom.themeIcon.innerHTML = state.isDarkMode ? '&#9728;' : '&#9789;';
+            dom.themeIcon && (dom.themeIcon.innerHTML = state.isDarkMode ? '&#9728;' : '&#9789;');
             localStorage.setItem('animker-theme', state.isDarkMode ? 'dark' : 'light');
         }
 
         function setupMobileNav() {
             const checkMobile = () => {
-                dom.mobileNav.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+                if (dom.mobileNav) {
+                    dom.mobileNav.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+                }
             };
             checkMobile();
             window.addEventListener('resize', checkMobile);
         }
 
         function updateSyncStatus(text, status) {
-            dom.syncText.textContent = text;
-            dom.syncStatus.className = 'sync-status ' + status;
+            if (dom.syncText) dom.syncText.textContent = text;
+            if (dom.syncStatus) dom.syncStatus.className = `sync-status ${status}`;
         }
 
         // Auth
         onAuthStateChanged(auth, user => {
             if (user) {
                 state.currentUser = user;
-                dom.loginOverlay.style.display = 'none';
-                dom.userAvatar.src = user.photoURL || '/placeholder.svg';
+                dom.loginOverlay && (dom.loginOverlay.style.display = 'none');
+                dom.userAvatar && (dom.userAvatar.src = user.photoURL || '/placeholder.svg');
                 setupListeners();
                 loadData();
             } else {
                 state.currentUser = null;
-                if (!getSharedListFromUrl()) dom.loginOverlay.style.display = 'flex';
+                if (!getSharedListFromUrl() && dom.loginOverlay) dom.loginOverlay.style.display = 'flex';
                 [unsubscribeAnimes, unsubscribeCategories, unsubscribeMovies].forEach(fn => fn?.());
             }
         });
 
         function setupListeners() {
-            // Stars - using event delegation
+            // Stars - event delegation
             const setupStars = (container, setter) => {
+                if (!container) return;
                 container.addEventListener('click', e => {
-                    if (e.target.classList.contains('star')) {
-                        setter(parseInt(e.target.dataset.rating));
+                    const star = e.target.closest('.star');
+                    if (star && star.dataset.rating) {
+                        const rating = parseInt(star.dataset.rating, 10);
+                        setter(rating);
                     }
                 });
             };
-            setupStars(dom.newRating, val => { state.currentRating = val; updateStars(dom.newRating, val); });
-            setupStars(dom.editRating, val => { state.editRatingValue = val; updateStars(dom.editRating, val); });
+            setupStars(dom.newRating, val => {
+                state.currentRating = val;
+                updateStars(dom.newRating, val);
+            });
+            setupStars(dom.editRating, val => {
+                state.editRatingValue = val;
+                updateStars(dom.editRating, val);
+            });
 
             // Images
-            dom.itemImage.addEventListener('change', e => handleImage(e, 'new'));
-            dom.editImage.addEventListener('change', e => handleImage(e, 'edit'));
+            dom.itemImage && dom.itemImage.addEventListener('change', e => handleImage(e, 'new'));
+            dom.editImage && dom.editImage.addEventListener('change', e => handleImage(e, 'edit'));
 
             // Search & Filter
-            dom.searchInput.addEventListener('input', e => { state.searchTerm = e.target.value.toLowerCase(); render(); });
-            dom.categoryFilter.addEventListener('change', e => { state.currentCategory = e.target.value || 'all'; render(); });
+            dom.searchInput && dom.searchInput.addEventListener('input', e => {
+                state.searchTerm = e.target.value.toLowerCase();
+                render();
+            });
+            dom.categoryFilter && dom.categoryFilter.addEventListener('change', e => {
+                state.currentCategory = e.target.value || 'all';
+                render();
+            });
 
             // Enter keys
-            dom.newCategory.addEventListener('keypress', e => e.key === 'Enter' && addCategory());
-            dom.newOpeningNum.addEventListener('keypress', e => e.key === 'Enter' && addOpening('new'));
-            dom.editOpeningNum.addEventListener('keypress', e => e.key === 'Enter' && addOpening('edit'));
+            dom.newCategory && dom.newCategory.addEventListener('keypress', e => {
+                if (e.key === 'Enter') addCategory();
+            });
+            dom.newOpeningNum && dom.newOpeningNum.addEventListener('keypress', e => {
+                if (e.key === 'Enter') addOpening('new');
+            });
+            dom.editOpeningNum && dom.editOpeningNum.addEventListener('keypress', e => {
+                if (e.key === 'Enter') addOpening('edit');
+            });
 
             // Modal close on backdrop
-            dom.editModal.addEventListener('click', e => e.target === dom.editModal && closeEditModal());
+            dom.editModal && dom.editModal.addEventListener('click', e => {
+                if (e.target === dom.editModal) closeEditModal();
+            });
         }
 
         // Shared compression: crops to 400x200 (2:1) and exports JPEG @ 0.8.
         // `offset` (0..1) controls which part of the cropped axis is kept:
         //   for tall images it is the vertical position (0=top, 0.5=center, 1=bottom),
         //   for wide images it is the horizontal position.
-        function compressImageElement(img, offset) {
-            if (offset == null) offset = 0.5;
+        function compressImageElement(img, offset = 0.5) {
             offset = Math.max(0, Math.min(1, offset));
 
             const canvas = document.createElement('canvas');
@@ -1739,21 +1846,52 @@
             const TARGET_HEIGHT = 200;
             const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT; // 2:1
 
-            let cropWidth, cropHeight, cropX, cropY;
+            let cropWidth, cropHeight, cropX = 0, cropY = 0;
             const srcRatio = img.width / img.height;
 
             if (srcRatio > TARGET_RATIO) {
-                // Wider than target: crop sides, offset moves horizontally
+                // Image is wider than target: crop sides
                 cropHeight = img.height;
                 cropWidth = cropHeight * TARGET_RATIO;
-                cropX = (img.width - cropWidth) * offset;
-                cropY = 0;
+                cropX = Math.round((img.width - cropWidth) * offset);
             } else {
-                // Taller than target: crop top/bottom, offset moves vertically
+                // Image is taller than target: crop top/bottom
                 cropWidth = img.width;
                 cropHeight = cropWidth / TARGET_RATIO;
-                cropX = 0;
-                cropY = (img.height - cropHeight) * offset;
+                cropY = Math.round((img.height - cropHeight) * offset);
+            }
+
+            canvas.width = TARGET_WIDTH;
+            canvas.height = TARGET_HEIGHT;
+            ctx.drawImage(
+                img,
+                cropX,
+                cropY,
+                cropWidth,
+                cropHeight,
+                0,
+                0,
+                TARGET_WIDTH,
+                TARGET_HEIGHT
+            );
+
+            // Return compressed JPEG blob
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(blob => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Error al comprimir la imagen'));
+                }, 'image/jpeg', 0.8);
+            });
+        }
+                const cropWidth = cropHeight * TARGET_RATIO;
+                const cropX = (img.width - cropWidth) * offset;
+                const cropY = 0;
+            } else {
+                // Taller than target: crop top/bottom, offset moves vertically
+                const cropWidth = img.width;
+                const cropHeight = cropWidth / TARGET_RATIO;
+                const cropX = 0;
+                const cropY = (img.height - cropHeight) * offset;
             }
 
             canvas.width = TARGET_WIDTH;
@@ -1763,7 +1901,7 @@
             return canvas.toDataURL('image/jpeg', 0.8);
         }
 
-        // Re-renders the preview + stored data for the given panel using the current source image and crop offset
+        // Re‑renderiza la vista previa y los datos almacenados del panel indicado usando la imagen fuente actual y el desplazamiento del recorte
         function applyCrop(type) {
             const src = type === 'new' ? state.newImgSource : state.editImgSource;
             if (!src) return;
@@ -1776,12 +1914,17 @@
             else state.editImageData = compressed;
         }
 
-        // Stores the source image, reveals the crop slider, and renders the first preview
+        // Guarda la imagen fuente, muestra el control deslizante de recorte y genera la primera vista previa
         function setSourceImage(type, img) {
             const cropRow = type === 'new' ? dom.newCropRow : dom.editCropRow;
             const slider = type === 'new' ? dom.newCropSlider : dom.editCropSlider;
-            if (type === 'new') { state.newImgSource = img; state.newImgOffset = 0.5; }
-            else { state.editImgSource = img; state.editImgOffset = 0.5; }
+            if (type === 'new') {
+                state.newImgSource = img;
+                state.newImgOffset = 0.5;
+            } else {
+                state.editImgSource = img;
+                state.editImgOffset = 0.5;
+            }
             if (slider) slider.value = 50;
             if (cropRow) cropRow.style.display = 'flex';
             applyCrop(type);
@@ -1795,7 +1938,7 @@
         }
 
         function handleImage(e, type) {
-            const file = e.target.files[0];
+            const file = e.target.files?.[0];
             if (!file) return;
 
             const reader = new FileReader();
@@ -1808,18 +1951,26 @@
         }
 
         function encodeSharedList(items) {
-            const json = JSON.stringify(items.map(item => ({ n: item.name || '', r: Number(item.rating) || 0 })));
-            const bytes = new TextEncoder().encode(json);
-            let binary = '';
-            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            const json = JSON.stringify(
+                items.map(item => ({
+                    n: item.name || '',
+                    r: Number(item.rating) || 0
+                }))
+            );
+            const binary = String.fromCharCode(...new TextEncoder().encode(json));
             return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
         }
 
         function decodeSharedList(value) {
             try {
-                const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
-                return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
-            } catch (_) { return []; }
+                const padded = value.replace(/-/g, '+').replace(/_/g, '/') +
+                    '='.repeat((4 - (value.length % 4)) % 4);
+                const binary = atob(padded);
+                const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+                return JSON.parse(new TextDecoder().decode(bytes));
+            } catch (_) {
+                return [];
+            }
         }
 
         function getSharedListFromUrl() {
@@ -1829,10 +1980,17 @@
 
         async function shareAnimeList() {
             const items = state.animes.filter(item => item.status === 'completed' || item.status === 'watching');
-            if (!items.length) { alert('Añade algún anime completado o que estés viendo para compartirlo.'); return; }
-            const url = location.href.split('#')[0] + '#lista=' + encodeSharedList(items);
-            try { await navigator.clipboard.writeText(url); alert('Enlace corto copiado al portapapeles.'); }
-            catch (_) { prompt('Copia este enlace para compartir tu lista:', url); }
+            if (!items.length) {
+                alert('Añade algún anime completado o que estés viendo para compartirlo.');
+                return;
+            }
+            const url = `${location.href.split('#')[0]}#lista=${encodeSharedList(items)}`;
+            try {
+                await navigator.clipboard.writeText(url);
+                alert('Enlace corto copiado al portapapeles.');
+            } catch (_) {
+                prompt('Copia este enlace para compartir tu lista:', url);
+            }
         }
 
         function renderSharedView(items) {
@@ -1841,14 +1999,32 @@
             document.querySelector('header').style.display = 'none';
             document.querySelector('body > main').style.display = 'none';
             dom.sharedView.style.display = 'block';
-            dom.sharedSubtitle.textContent = items.length + ' anime compartido' + (items.length === 1 ? '' : 's');
-            dom.sharedCards.innerHTML = items.map(item => `<article class="card"><div class="card-body"><h2 class="card-title">${escapeHtml(item.n)}</h2><div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > item.r ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${item.r ? item.r + '/5 estrellas' : 'Sin valoración'}</div></div></article>`).join('');
+            dom.sharedSubtitle.textContent = `${items.length} anime compartido${items.length === 1 ? '' : 's'}`;
+            dom.sharedCards.innerHTML = items
+                .map(item => `
+                    <article class="card">
+                        <div class="card-body">
+                            <h2 class="card-title">${escapeHtml(item.n)}</h2>
+                            <div class="card-stars">
+                                ${[1, 2, 3, 4, 5]
+                                    .map(i => `<span class="${i > item.r ? 'empty' : ''}">★</span>`)
+                                    .join('')}
+                            </div>
+                            <div class="card-meta">${item.r ? `${item.r}/5 estrellas` : 'Sin valoración'}</div>
+                        </div>
+                    </article>
+                `.trim())
+                .join('');
         }
 
         function escapeHtml(s) {
             return (s || '').replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[c]);
         }
 
         function sanitizeExternalUrl(value) {
@@ -1862,52 +2038,58 @@
             }
         }
 
-        // Loads a remote image as a CORS-clean element. Instead of assigning the proxy URL
-        // straight to an <img> (which fails silently and can leave the canvas "tainted"),
-        // we fetch the raw bytes ourselves and build a local blob: URL from them - a blob:
-        // URL is always same-origin, so the canvas can never be tainted once we get here.
+        // Carga una imagen remota como elemento limpio de CORS. En lugar de asignar directamente la URL del proxy
+        // a un <img> (lo que falla silenciosamente y puede "contaminar" el canvas),
+        // descargamos los bytes nosotros mismos y creamos una URL blob local a partir de ellos.
+        // Una URL blob es siempre same‑origin, por lo que el canvas nunca quedará contaminado una vez aquí.
         async function loadCorsImage(url) {
             const clean = url.replace(/^https?:\/\//, '');
             const candidates = [
-                'https://images.weserv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg',
-                'https://wsrv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg',
-                'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-                'https://corsproxy.io/?url=' + encodeURIComponent(url),
-                url // last resort: direct (works only if the host sends CORS headers)
+                `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&output=jpg`,
+                `https://wsrv.nl/?url=${encodeURIComponent(clean)}&output=jpg`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+                url // último recurso: directo (solo si el host envía cabeceras CORS)
             ];
 
             let lastErr = null;
             for (const src of candidates) {
                 try {
                     const res = await fetch(src, { mode: 'cors', cache: 'no-store' });
-                    if (!res.ok) throw new Error('http_' + res.status);
+                    if (!res.ok) throw new Error(`http_${res.status}`);
+
                     const blob = await res.blob();
                     if (!blob.type.startsWith('image/')) throw new Error('respuesta_no_es_imagen');
 
                     const objectUrl = URL.createObjectURL(blob);
-                    const img = await new Promise((resolve, reject) => {
-                        const i = new Image();
-                        i.onload = () => resolve(i);
-                        i.onerror = () => reject(new Error('decode_failed'));
-                        i.src = objectUrl;
-                    });
+                    try {
+                        const img = await new Promise((resolve, reject) => {
+                            const i = new Image();
+                            i.onload = () => resolve(i);
+                            i.onerror = () => reject(new Error('decode_failed'));
+                            i.src = objectUrl;
+                        });
 
-                    // Sanity check: this should always pass since the blob is same-origin,
-                    // but we verify anyway before handing the image back to the caller.
-                    const test = document.createElement('canvas');
-                    test.width = test.height = 2;
-                    test.getContext('2d').drawImage(img, 0, 0);
-                    test.toDataURL();
-                    return img;
+                        // Verificación de sanidad: debería pasar siempre, pero la mantenemos por seguridad.
+                        const canvas = document.createElement('canvas');
+                        canvas.width = canvas.height = 2;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        canvas.toDataURL(); // fuerza cualquier posible error de CORS
+
+                        return img;
+                    } finally {
+                        URL.revokeObjectURL(objectUrl);
+                    }
                 } catch (err) {
                     lastErr = err;
-                    console.log('[v0] proxy failed, trying next:', src, err.message);
+                    console.warn('[loadCorsImage] proxy falló, probando siguiente:', src, err.message);
                 }
             }
-            throw new Error('No se pudo cargar la imagen desde ninguna fuente' + (lastErr ? (' (' + lastErr.message + ')') : ''));
+            throw new Error(`No se pudo cargar la imagen desde ninguna fuente${lastErr ? ` (${lastErr.message})` : ''}`);
         }
 
-        // Searches the internet for cover images matching the typed name (uses the free Jikan/MyAnimeList API)
+        // Busca imágenes de portada en internet que coincidan con el nombre escrito (usa la API pública de Jikan/MyAnimeList)
         async function searchOnlineImages(type) {
             const nameEl = type === 'new' ? dom.itemName : dom.editName;
             const resultsEl = type === 'new' ? dom.imageSearchResults : dom.editImageSearchResults;
@@ -1916,7 +2098,10 @@
 
             const query = nameEl.value.trim();
             const contentSection = type === 'new' ? state.currentContentType : state.currentEditSection;
-            const isAnimeSearch = contentSection !== 'books' && (type === 'new' ? document.getElementById('itemIsAnime').checked : document.getElementById('editIsAnime').checked);
+            const isAnimeSearch = contentSection !== 'books' && (type === 'new'
+                ? document.getElementById('itemIsAnime').checked
+                : document.getElementById('editIsAnime').checked);
+
             if (!query) {
                 alert('Escribe primero el nombre del elemento');
                 nameEl.focus();
@@ -1926,25 +2111,30 @@
             resultsEl.style.display = 'none';
             resultsEl.innerHTML = '';
             statusEl.style.display = 'block';
-            statusEl.textContent = 'Buscando imagenes para "' + query + '"...';
+            statusEl.textContent = `Buscando imágenes para "${query}"...`;
             btn.disabled = true;
 
             async function fetchJikan() {
-                const res = await fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=12&sfw=true');
-                if (!res.ok) throw new Error('jikan_http_' + res.status);
+                const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=12&sfw=true`);
+                if (!res.ok) throw new Error(`jikan_http_${res.status}`);
                 const json = await res.json();
-                return (json.data || []).map(a => ({
-                    url: a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || '',
-                    title: a.title || query
-                })).filter(item => item.url);
+                return (json.data || [])
+                    .map(a => ({
+                        url: a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || '',
+                        title: a.title || query
+                    }))
+                    .filter(item => item.url);
             }
 
-            // Fallback source (AniList GraphQL) used if Jikan fails or has nothing,
-            // since it has a much more generous rate limit.
+            // Fuente alternativa (AniList GraphQL) en caso de que Jikan falle o no devuelva resultados,
+            // ya que tiene un límite de peticiones más generoso.
             async function fetchAniList() {
                 const res = await fetch('https://graphql.anilist.co', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({
                         query: `query ($search: String) {
                             Page(perPage: 24) {
@@ -1957,24 +2147,72 @@
                         variables: { search: query }
                     })
                 });
-                if (!res.ok) throw new Error('anilist_http_' + res.status);
+                if (!res.ok) throw new Error(`anilist_http_${res.status}`);
                 const json = await res.json();
-                const media = (json.data && json.data.Page && json.data.Page.media) || [];
+                const media = json?.data?.Page?.media || [];
                 return media
                     .map(m => ({
-                        url: (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large)) || '',
-                        title: (m.title && (m.title.romaji || m.title.english)) || query
+                        url: m.coverImage?.extraLarge || m.coverImage?.large || '',
+                        title: m.title?.romaji || m.title?.english || query
                     }))
-                    .filter(x => x.url);
+                    .filter(item => item.url);
             }
 
             async function fetchOtherImages() {
                 if (contentSection === 'books') {
-                    const response = await fetch('https://openlibrary.org/search.json?title=' + encodeURIComponent(query) + '&limit=12');
-                    if (!response.ok) throw new Error('openlibrary_http_' + response.status);
+                    const response = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(query)}&limit=12`);
+                    if (!response.ok) throw new Error(`openlibrary_http_${response.status}`);
                     const json = await response.json();
-                    return (json.docs || []).filter(book => book.cover_i).map(book => ({
-                        url: 'https://covers.openlibrary.org/b/id/' + book.cover_i + '-L.jpg',
+                    return (json.docs || [])
+                        .filter(book => book.cover_i)
+                        .map(book => ({
+                            url: `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`,
+                            title: book.title || query
+                        }));
+                }
+                return [];
+            }
+
+            try {
+                let images = await fetchJikan().catch(err => {
+                    console.warn('Jikan falló:', err);
+                    return [];
+                });
+
+                if (!images.length) {
+                    images = await fetchAniList().catch(err => {
+                        console.warn('AniList falló:', err);
+                        return [];
+                    });
+                }
+
+                if (!images.length) {
+                    images = await fetchOtherImages().catch(err => {
+                        console.warn('Fuente alternativa falló:', err);
+                        return [];
+                    });
+                }
+
+                if (!images.length) {
+                    throw new Error('No se encontraron imágenes para la búsqueda.');
+                }
+
+                // Mostrar resultados
+                resultsEl.innerHTML = images
+                    .map(img => `<div class="result-item">
+                                    <img src="${img.url}" alt="${img.title}" loading="lazy">
+                                    <span>${img.title}</span>
+                                </div>`)
+                    .join('');
+                resultsEl.style.display = 'grid';
+            } catch (e) {
+                statusEl.textContent = `Error: ${e.message}`;
+                console.error(e);
+            } finally {
+                statusEl.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
                         title: book.title || query
                     }));
                 }
@@ -1982,9 +2220,13 @@
                     const response = await fetch('https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(query));
                     if (!response.ok) throw new Error('tvmaze_http_' + response.status);
                     const json = await response.json();
-                    return json.slice(0, 12).map(entry => ({ url: entry.show?.image?.original || entry.show?.image?.medium || '', title: entry.show?.name || query })).filter(item => item.url);
+                    return json.slice(0, 12).map(entry => ({
+                        url: entry.show?.image?.original || entry.show?.image?.medium || '',
+                        title: entry.show?.name || query
+                    })).filter(item => item.url);
                 }
-                const entity = contentSection === 'movies' ? 'movie' : 'movie';
+                // Para iTunes solo buscamos películas; la entidad siempre es 'movie'
+                const entity = 'movie';
                 const response = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&entity=' + entity + '&limit=12');
                 if (!response.ok) throw new Error('itunes_http_' + response.status);
                 const json = await response.json();
@@ -2131,11 +2373,14 @@
 
         function updateSectionCounts() {
             const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
-            const items = baseItems.filter(item => (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType);
+            const items = baseItems.filter(item => {
+                const section = item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies');
+                return section === state.currentContentType;
+            });
             dom.countAll.textContent = items.length;
             dom.countWatching.textContent = items.filter(i => i.status === 'watching').length;
             dom.countPlanned.textContent = items.filter(i => i.status === 'planned').length;
-            dom.countCompleted.textContent = items.filter(i => !i.status || i.status === 'completed').length;
+            dom.countCompleted.textContent = items.filter(i => i.status === 'completed').length;
         }
 
         function selectSection(section) {
@@ -2188,7 +2433,11 @@
         function toggleCategorySelection(type, cat) {
             const arr = type === 'new' ? state.selectedCategories : state.editSelectedCategories;
             const idx = arr.indexOf(cat);
-            idx === -1 ? arr.push(cat) : arr.splice(idx, 1);
+            if (idx === -1) {
+                arr.push(cat);
+            } else {
+                arr.splice(idx, 1);
+            }
             renderCategoryChips();
         }
 
@@ -2203,16 +2452,25 @@
             dom.categoryBar.style.display = 'flex';
 
             const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
-            const sectionItems = baseItems.filter(item =>
-                (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType
-            );
+            const sectionItems = baseItems.filter(item => {
+                const section = item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies');
+                return section === state.currentContentType;
+            });
             const filteredBySection = state.currentSection === 'all'
                 ? sectionItems
                 : sectionItems.filter(i => (i.status || 'completed') === state.currentSection);
 
-            dom.categoryBar.innerHTML =
-                `<div class="category-chip ${state.currentCategory === 'all' ? 'active' : ''}" onclick="selectCategory('all')">Todas <span class="chip-count">${filteredBySection.length}</span></div>` +
-                state.categories.map(c => {
+            const chips = [
+                `<div class="category-chip ${state.currentCategory === 'all' ? 'active' : ''}" onclick="selectCategory('all')">Todas <span class="chip-count">${filteredBySection.length}</span></div>`
+            ];
+
+            chips.push(...state.categories.map(c => {
+                const count = filteredBySection.filter(i => i.categories && i.categories.includes(c)).length;
+                return `<div class="category-chip ${state.currentCategory === c ? 'active' : ''}" onclick="selectCategory('${c}')">${c} <span class="chip-count">${count}</span></div>`;
+            }));
+
+            dom.categoryBar.innerHTML = chips.join('');
+        }
                     const count = filteredBySection.filter(i => (i.categories || []).includes(c)).length;
                     if (count === 0) return '';
                     return `<div class="category-chip ${state.currentCategory === c ? 'active' : ''}" onclick="selectCategory('${c}')">${c} <span class="chip-count">${count}</span></div>`;
@@ -2230,7 +2488,10 @@
             state.currentContentType = type;
             document.querySelectorAll('.nav-tab').forEach(el => {
                 const label = el.textContent.trim().toLowerCase();
-                const key = label === 'series' ? 'series' : label === 'películas' ? 'movies' : label === 'cortos' ? 'shorts' : label === 'libros' ? 'books' : '';
+                const key = label === 'series' ? 'series' :
+                            label === 'películas' ? 'movies' :
+                            label === 'cortos' ? 'shorts' :
+                            label === 'libros' ? 'books' : '';
                 el.classList.toggle('active', key === type);
             });
             const isSeries = type === 'series';
@@ -2255,18 +2516,28 @@
 
         function switchView(view) {
             state.currentView = view;
-            document.querySelectorAll('.view-btn').forEach((b, i) => b.classList.toggle('active', (view === 'grid' && i === 0) || (view === 'list' && i === 1)));
+            document.querySelectorAll('.view-btn').forEach((b, i) => 
+                b.classList.toggle('active', (view === 'grid' && i === 0) || (view === 'list' && i === 1))
+            );
             dom.cardsGrid.style.display = view === 'grid' ? 'grid' : 'none';
             dom.listView.classList.toggle('active', view === 'list');
             render();
         }
 
         function togglePanel(id) {
-            ['categoryManager', 'backupPanel', 'addPanel'].forEach(p => {
+            const panels = ['categoryManager', 'backupPanel', 'addPanel'];
+            panels.forEach(p => {
                 const el = document.getElementById(p);
-                el.style.display = p === id && el.style.display === 'none' ? 'block' : p === id ? (el.style.display === 'none' ? 'block' : 'none') : 'none';
+                if (!el) return;
+                if (p === id) {
+                    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                } else {
+                    el.style.display = 'none';
+                }
             });
-            if (id === 'addPanel') renderCategoryChips();
+            if (id === 'addPanel' && document.getElementById('addPanel').style.display !== 'none') {
+                renderCategoryChips();
+            }
         }
 
         // Category CRUD
@@ -2317,7 +2588,7 @@
         // Openings
         function addOpening(type) {
             const input = type === 'new' ? dom.newOpeningNum : dom.editOpeningNum;
-            const num = parseInt(input.value);
+            const num = parseInt(input.value, 10);
             if (!num || num < 1) return;
             const arr = type === 'new' ? state.currentOpenings : state.editOpenings;
             if (!arr.includes(num)) {
@@ -2381,8 +2652,8 @@
             if (state.currentContentType === 'movies') {
                 data.song = dom.itemSong.value.trim() || null;
             } else if (!isMovie) {
-                data.season = parseInt(dom.itemSeason.value) || 1;
-                data.episode = parseInt(dom.itemEpisode.value) || 1;
+                data.season = parseInt(dom.itemSeason.value, 10) || 1;
+                data.episode = parseInt(dom.itemEpisode.value, 10) || 1;
                 data.openings = [...state.currentOpenings];
             }
 
@@ -2420,7 +2691,7 @@
                 updateSyncStatus('Error', 'offline');
             }
             dom.addItemBtn.disabled = false;
-            dom.addItemBtn.textContent = 'Anadir';
+            dom.addItemBtn.textContent = 'Añadir';
         }
 
         // Quick status change
@@ -2436,6 +2707,11 @@
 
             try {
                 await setDoc(doc(db, 'users', state.currentUser.uid, ref, id), data);
+                // Update local state
+                const targetList = type === 'anime' ? state.animes : state.movies;
+                const index = targetList.findIndex(i => i.id === id);
+                if (index !== -1) targetList[index].status = newStatus;
+
                 updateSyncStatus('Actualizado', '');
             } catch (e) {
                 console.error(e);
@@ -2464,21 +2740,22 @@
 
             const sectionLabels = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
             dom.editModalTitle.textContent = 'Editar ' + (item.isAnime ? 'Anime · ' : '') + (sectionLabels[contentSection] || 'elemento');
+        }
             dom.editName.value = item.name;
             dom.editSubName.value = item.subName || '';
             dom.editSeasonEpisode.style.display = isSeries ? 'grid' : 'none';
             dom.editOpeningsGroup.style.display = isSeries ? 'block' : 'none';
             dom.editSongGroup.style.display = contentSection === 'movies' ? 'block' : 'none';
-            document.getElementById('editAnimeOption').style.display = isBook ? 'none' : 'inline-flex';
-            document.getElementById('editMangaOption').style.display = isBook ? 'inline-flex' : 'none';
-            document.getElementById('editIsAnime').checked = Boolean(item.isAnime);
-            document.getElementById('editIsManga').checked = Boolean(item.isManga);
-            document.getElementById('editShortLinkGroup').style.display = contentSection === 'shorts' ? 'block' : 'none';
-            document.getElementById('editExternalUrl').value = item.externalUrl || '';
+            dom.editAnimeOption.style.display = isBook ? 'none' : 'inline-flex';
+            dom.editMangaOption.style.display = isBook ? 'inline-flex' : 'none';
+            dom.editIsAnime.checked = Boolean(item.isAnime);
+            dom.editIsManga.checked = Boolean(item.isManga);
+            dom.editShortLinkGroup.style.display = contentSection === 'shorts' ? 'block' : 'none';
+            dom.editExternalUrl.value = item.externalUrl || '';
 
             if (isSeries) {
-                dom.editSeason.value = item.season || 1;
-                dom.editEpisode.value = item.episode || 1;
+                dom.editSeason.value = item.season ?? 1;
+                dom.editEpisode.value = item.episode ?? 1;
             } else {
                 dom.editSong.value = item.song || '';
             }
@@ -2509,12 +2786,14 @@
 
         async function saveEdit() {
             const name = dom.editName.value.trim();
+            const externalUrlInput = dom.editExternalUrl.value.trim();
+
             if (!name || state.editSelectedCategories.length === 0 || state.editRatingValue === 0) {
                 alert('Completa nombre, categoría y valoración');
                 return;
             }
-            const editUrlInput = document.getElementById('editExternalUrl').value.trim();
-            if (state.currentEditSection === 'shorts' && editUrlInput && !sanitizeExternalUrl(editUrlInput)) {
+
+            if (state.currentEditSection === 'shorts' && externalUrlInput && !sanitizeExternalUrl(externalUrlInput)) {
                 alert('Escribe un enlace válido que comience con http:// o https://');
                 return;
             }
@@ -2534,16 +2813,19 @@
                 rating: state.editRatingValue,
                 status: state.editStatus,
                 contentSection: original?.contentSection || (state.currentEditType === 'anime' ? 'series' : 'movies'),
-                isAnime: document.getElementById('editIsAnime').checked,
-                isManga: document.getElementById('editIsManga').checked,
-                externalUrl: original?.contentSection === 'shorts' ? sanitizeExternalUrl(document.getElementById('editExternalUrl').value) : original?.externalUrl || null,
+                isAnime: dom.editIsAnime.checked,
+                isManga: dom.editIsManga.checked,
+                externalUrl:
+                    original?.contentSection === 'shorts'
+                        ? sanitizeExternalUrl(externalUrlInput) || null
+                        : externalUrlInput || original?.externalUrl || null,
                 image: state.editImageData,
                 dateAdded: original?.dateAdded || new Date().toISOString()
             };
 
             if (state.currentEditSection === 'series') {
-                data.season = parseInt(dom.editSeason.value) || 1;
-                data.episode = parseInt(dom.editEpisode.value) || 1;
+                data.season = parseInt(dom.editSeason.value, 10) || 1;
+                data.episode = parseInt(dom.editEpisode.value, 10) || 1;
                 data.openings = [...state.editOpenings];
             } else if (state.currentEditSection === 'movies') {
                 data.song = dom.editSong.value.trim() || null;
@@ -2557,9 +2839,10 @@
                 console.error(e);
                 alert('Error al guardar');
                 updateSyncStatus('Error', 'offline');
+            } finally {
+                dom.saveEditBtn.disabled = false;
+                dom.saveEditBtn.textContent = 'Guardar';
             }
-            dom.saveEditBtn.disabled = false;
-            dom.saveEditBtn.textContent = 'Guardar';
         }
 
         function closeEditModal() {
@@ -2569,7 +2852,7 @@
             state.currentEditId = null;
             state.currentEditType = null;
             state.currentEditSection = null;
-            document.getElementById('editExternalUrl').value = '';
+            dom.editExternalUrl.value = '';
             state.editRatingValue = 0;
             state.editSelectedCategories = [];
             state.editOpenings = [];
@@ -2587,6 +2870,12 @@
             dom.editImageGalleryGrid.innerHTML = others.map((img, idx) => {
                 const globalIdx = state.editImages.indexOf(img);
                 return `
+                    <div class="gallery-item" data-idx="${globalIdx}" title="${idx + 1}">
+                        <img src="${img}" alt="Imagen ${idx + 1}" />
+                    </div>
+                `;
+            }).join('');
+        }
                     <div class="img-gallery-item" onclick="selectGalleryImage(${globalIdx})">
                         <img src="${img}" alt="Foto ${globalIdx + 1}">
                         <button class="img-remove" onclick="event.stopPropagation(); removeGalleryImage(${globalIdx})">&times;</button>
@@ -2638,9 +2927,9 @@
 
         // Render - optimized
         function getFilteredItems() {
-            let items = ['series'].includes(state.currentContentType) ? state.animes : state.movies;
+            const baseItems = ['series'].includes(state.currentContentType) ? state.animes : state.movies;
             const legacySection = state.currentContentType === 'series' ? 'series' : 'movies';
-            items = items.filter(item => (item.contentSection || legacySection) === state.currentContentType);
+            let items = baseItems.filter(item => (item.contentSection || legacySection) === state.currentContentType);
             
             // Filter by status section
             if (state.currentSection !== 'all') {
@@ -2654,11 +2943,12 @@
             
             // Filter by search
             if (state.searchTerm) {
+                const term = state.searchTerm.toLowerCase();
                 items = items.filter(i => {
-                const inName = i.name.toLowerCase().includes(state.searchTerm);
-                const inSub = (i.subName || '').toLowerCase().includes(state.searchTerm);
-                return inName || inSub;
-            });
+                    const name = (i.name || '').toLowerCase();
+                    const sub = (i.subName || '').toLowerCase();
+                    return name.includes(term) || sub.includes(term);
+                });
             }
             
             return items.sort((a, b) => b.rating - a.rating);
@@ -2720,8 +3010,12 @@
                 return;
             }
 
+            // ... resto del renderizado ...
+        }
+            }
+
             dom.cardsGrid.innerHTML = items.map(item => {
-                const cats = (item.categories || []).map(c => `<span class="card-tag">${c}</span>`).join('');
+                const cats = (item.categories || []).map(c => `<span class="card-tag">${escapeHtml(c)}</span>`).join('');
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
                 const status = item.status || 'completed';
                 
@@ -2729,14 +3023,14 @@
                 if (!isSeries && item.song) {
                     extra = `<div class="card-extra"><strong>Canción:</strong> ${escapeHtml(item.song)}</div>`;
                 } else if (isSeries) {
-                    const openings = item.openings?.length ? item.openings.map(o => `T${o}`).join(', ') : 'Sin favoritos';
+                    const openings = item.openings?.length ? item.openings.map(o => `T${escapeHtml(o)}`).join(', ') : 'Sin favoritos';
                     extra = `<div class="card-extra"><strong>Openings:</strong> ${openings}</div>`;
                 }
 
                 return `
                     <div class="card">
                         ${getQuickStatusMenu(type, item.id, status)}
-                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image">` : `<div class="card-placeholder">Sin imagen</div>`}
+                        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="card-image">` : `<div class="card-placeholder">Sin imagen</div>`}
                         <div class="card-body">
                             <div class="card-badges"><span class="card-badge">${sectionNames[item.contentSection || (isSeries ? 'series' : 'movies')] || 'Elemento'}</span>${item.isAnime ? '<span class="card-badge">Anime</span>' : ''}${item.isManga ? '<span class="card-badge">Manga</span>' : ''}</div>
                             <h3 class="card-title">${getStatusDot(status)} ${escapeHtml(item.name)}</h3>
@@ -2768,16 +3062,21 @@
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
                 const meta = isSeries && item.season != null && item.episode != null
                     ? `T${item.season} - Ep. ${item.episode}`
-                    : (item.isAnime ? 'Anime' : item.isManga ? 'Manga' : item.contentSection === 'shorts' ? 'Corto' : item.contentSection === 'books' ? 'Libro' : (item.song || ''));
+                    : item.isAnime ? 'Anime'
+                    : item.isManga ? 'Manga'
+                    : item.contentSection === 'shorts' ? 'Corto'
+                    : item.contentSection === 'books' ? 'Libro'
+                    : item.song ? escapeHtml(item.song)
+                    : '';
                 const status = item.status || 'completed';
 
                 return `
                     <div class="list-item">
-                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="list-thumb">` : `<div class="list-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);">Sin img</div>`}
+                        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="list-thumb">` : `<div class="list-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);">Sin img</div>`}
                         <div class="list-info">
                             <div class="list-title">
                                 <span class="list-status-dot ${status}"></span>
-                                ${item.name}
+                                ${escapeHtml(item.name)}
                             </div>
                             <div class="list-meta">${meta}</div>
                         </div>
@@ -2817,77 +3116,100 @@
                     image: m.image, 
                     status: m.status || 'completed',
                     dateAdded: m.dateAdded 
-                }))
+                }))});
+                }));
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `animker-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `animker-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
             updateSyncStatus('Exportado', '');
         }
 
         async function importBackup(e) {
-            const file = e.target.files[0];
+            const file = e.target.files?.[0];
             if (!file) return;
+
+            if (!file.name.endsWith('.json')) {
+                alert('Por favor seleccione un archivo JSON válido');
+                e.target.value = '';
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = async ev => {
                 try {
                     const data = JSON.parse(ev.target.result);
-                    if (!data.categories || !data.animes) { alert('Archivo no valido'); return; }
+                    if (!data.categories || !data.animes) {
+                        alert('Archivo no válido');
+                        return;
+                    }
+
                     const movieCount = data.movies?.length || 0;
-                    if (!confirm(`Importar ${data.categories.length} categorias, ${data.animes.length} animes y ${movieCount} peliculas?`)) return;
+                    if (!confirm(`Importar ${data.categories.length} categorías, ${data.animes.length} animes y ${movieCount} películas?`)) return;
 
                     updateSyncStatus('Importando...', 'syncing');
-                    const uid = state.currentUser.uid;
+                    const uid = state.currentUser?.uid;
+                    if (!uid) throw new Error('Usuario no autenticado');
 
                     // Categories
                     const newCats = data.categories.filter(c => !state.categories.includes(c));
-                    state.categories.push(...newCats);
-                    await saveCategories();
+                    if (newCats.length) {
+                        state.categories.push(...newCats);
+                        await saveCategories();
+                    }
 
                     // Animes
                     for (const a of data.animes) {
                         if (!state.animes.some(x => x.name === a.name)) {
-                            await setDoc(doc(db, 'users', uid, 'animes', Date.now().toString() + Math.random().toString(36).substr(2, 5)), {
-                                name: a.name, 
-                                categories: a.categories || [a.category], 
-                                rating: a.rating, 
-                                season: a.season, 
-                                episode: a.episode, 
-                                image: a.image, 
-                                openings: a.openings || [], 
-                                status: a.status || 'completed',
-                                dateAdded: a.dateAdded || new Date().toISOString()
-                            });
+                            await setDoc(
+                                doc(db, 'users', uid, 'animes', `${Date.now()}${Math.random().toString(36).substr(2, 5)}`),
+                                {
+                                    name: a.name,
+                                    categories: a.categories || [a.category],
+                                    rating: a.rating,
+                                    season: a.season,
+                                    episode: a.episode,
+                                    image: a.image,
+                                    openings: a.openings || [],
+                                    status: a.status || 'completed',
+                                    dateAdded: a.dateAdded || new Date().toISOString()
+                                }
+                            );
                         }
                     }
 
                     // Movies
-                    if (data.movies) {
+                    if (Array.isArray(data.movies)) {
                         for (const m of data.movies) {
                             if (!state.movies.some(x => x.name === m.name)) {
-                                await setDoc(doc(db, 'users', uid, 'movies', Date.now().toString() + Math.random().toString(36).substr(2, 5)), {
-                                    name: m.name, 
-                                    categories: m.categories || [m.category], 
-                                    rating: m.rating, 
-                                    song: m.song, 
-                                    image: m.image, 
-                                    status: m.status || 'completed',
-                                    dateAdded: m.dateAdded || new Date().toISOString()
-                                });
+                                await setDoc(
+                                    doc(db, 'users', uid, 'movies', `${Date.now()}${Math.random().toString(36).substr(2, 5)}`),
+                                    {
+                                        name: m.name,
+                                        categories: m.categories || [m.category],
+                                        rating: m.rating,
+                                        song: m.song,
+                                        image: m.image,
+                                        status: m.status || 'completed',
+                                        dateAdded: m.dateAdded || new Date().toISOString()
+                                    }
+                                );
                             }
                         }
                     }
 
                     updateSyncStatus('Importado', '');
-                    alert('Backup importado');
+                    alert('Backup importado correctamente');
                 } catch (err) {
                     console.error(err);
-                    alert('Error al importar');
-                    updateSyncStatus('Error', 'offline');
+                    alert('Error al importar el backup');
+                    updateSyncStatus('Error', 'error');
                 }
             };
             reader.readAsText(file);
