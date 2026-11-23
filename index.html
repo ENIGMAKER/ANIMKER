@@ -32,6 +32,7 @@
             --watching: #3b82f6;
             --planned: #8b5cf6;
             --completed: #22c55e;
+            --unfinished: #ef4444;
             --radius: 12px;
             --radius-sm: 8px;
             --radius-full: 9999px;
@@ -494,6 +495,7 @@
         .section-tab[data-section="watching"] .indicator { background: var(--watching); }
         .section-tab[data-section="planned"] .indicator { background: var(--planned); }
         .section-tab[data-section="completed"] .indicator { background: var(--completed); }
+        .section-tab[data-section="unfinished"] .indicator { background: var(--unfinished); }
 
         .section-indicator {
             width: 8px;
@@ -635,6 +637,7 @@
         .card-status-dot.status-dot-watching { background: var(--watching); }
         .card-status-dot.status-dot-planned  { background: var(--planned); }
         .card-status-dot.status-dot-completed { background: var(--completed); }
+        .card-status-dot.status-dot-unfinished { background: var(--unfinished); }
 
         .card-meta {
             font-size: 13px;
@@ -762,6 +765,7 @@
         .quick-status-item .dot.watching { background: var(--watching); }
         .quick-status-item .dot.planned { background: var(--planned); }
         .quick-status-item .dot.completed { background: var(--completed); }
+        .quick-status-item .dot.unfinished { background: var(--unfinished); }
 
         /* List View */
         .list-view { display: none; }
@@ -812,6 +816,7 @@
         .list-status-dot.watching { background: var(--watching); }
         .list-status-dot.planned { background: var(--planned); }
         .list-status-dot.completed { background: var(--completed); }
+        .list-status-dot.unfinished { background: var(--unfinished); }
 
         .list-meta {
             font-size: 13px;
@@ -1112,6 +1117,7 @@
         .status-option.selected[data-status="watching"] { border-color: var(--watching); background: rgba(59, 130, 246, 0.1); }
         .status-option.selected[data-status="planned"] { border-color: var(--planned); background: rgba(139, 92, 246, 0.1); }
         .status-option.selected[data-status="completed"] { border-color: var(--completed); background: rgba(34, 197, 94, 0.1); }
+        .status-option.selected[data-status="unfinished"] { border-color: var(--unfinished); background: rgba(239, 68, 68, 0.1); }
 
         /* Responsive */
         .nav-tabs { flex-wrap: wrap; }
@@ -1145,7 +1151,7 @@
         <main class="main">
             <div class="panel" style="max-width:900px; margin:40px auto;">
                 <div class="panel-header">
-                    <div><h1 class="panel-title">Lista compartida de anime</h1><p class="panel-subtitle" id="sharedSubtitle"></p></div>
+                    <div><h1 class="panel-title">Lista compartida</h1><p class="panel-subtitle" id="sharedSubtitle"></p></div>
                     <a class="btn btn-outline btn-sm" href="./">Crear mi lista</a>
                 </div>
                 <div class="cards-grid" id="sharedCards"></div>
@@ -1233,18 +1239,23 @@
             </button>
             <button class="section-tab" data-section="watching" onclick="selectSection('watching')">
                 <span class="section-indicator" style="background: var(--watching);"></span>
-                <span>Viendo</span>
+                <span>En curso</span>
                 <span class="count" id="countWatching">0</span>
             </button>
             <button class="section-tab" data-section="planned" onclick="selectSection('planned')">
                 <span class="section-indicator" style="background: var(--planned);"></span>
-                <span>Proximos</span>
+                <span>Próximos</span>
                 <span class="count" id="countPlanned">0</span>
             </button>
             <button class="section-tab" data-section="completed" onclick="selectSection('completed')">
                 <span class="section-indicator" style="background: var(--completed);"></span>
                 <span>Completados</span>
                 <span class="count" id="countCompleted">0</span>
+            </button>
+            <button class="section-tab" data-section="unfinished" onclick="selectSection('unfinished')">
+                <span class="section-indicator" style="background: var(--unfinished);"></span>
+                <span>Inacabados</span>
+                <span class="count" id="countUnfinished">0</span>
             </button>
         </div>
 
@@ -1340,11 +1351,15 @@
                 <div class="status-select-group" id="newStatusGroup">
                     <div class="status-option" data-status="watching" onclick="selectStatus('new', 'watching')">
                         <span class="section-indicator" style="background: var(--watching);"></span>
-                        Viendo
+                        En curso
                     </div>
                     <div class="status-option" data-status="planned" onclick="selectStatus('new', 'planned')">
                         <span class="section-indicator" style="background: var(--planned);"></span>
-                        Proximo
+                        Próximos
+                    </div>
+                    <div class="status-option" data-status="unfinished" onclick="selectStatus('new', 'unfinished')">
+                        <span class="section-indicator" style="background: var(--unfinished);"></span>
+                        Inacabado
                     </div>
                     <div class="status-option selected" data-status="completed" onclick="selectStatus('new', 'completed')">
                         <span class="section-indicator" style="background: var(--completed);"></span>
@@ -1380,7 +1395,7 @@
             </div>
             <div class="form-group" id="shortLinkGroup" style="margin-bottom: 20px; display:none;">
                 <label class="form-label" for="itemExternalUrl">Enlace del corto</label>
-                <input type="url" class="form-input" id="itemExternalUrl" placeholder="https://youtube.com/...">
+                <input type="url" class="form-input" id="itemExternalUrl" placeholder="https://youtube.com/..." oninput="syncShortVideoThumbnail('new')">
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
@@ -1473,11 +1488,15 @@
                     <div class="status-select-group" id="editStatusGroup">
                         <div class="status-option" data-status="watching" onclick="selectStatus('edit', 'watching')">
                             <span class="section-indicator" style="background: var(--watching);"></span>
-                            Viendo
+                            En curso
                         </div>
                         <div class="status-option" data-status="planned" onclick="selectStatus('edit', 'planned')">
                             <span class="section-indicator" style="background: var(--planned);"></span>
-                            Proximo
+                            Próximos
+                        </div>
+                        <div class="status-option" data-status="unfinished" onclick="selectStatus('edit', 'unfinished')">
+                            <span class="section-indicator" style="background: var(--unfinished);"></span>
+                            Inacabado
                         </div>
                         <div class="status-option" data-status="completed" onclick="selectStatus('edit', 'completed')">
                             <span class="section-indicator" style="background: var(--completed);"></span>
@@ -1506,7 +1525,7 @@
                 </div>
                 <div class="form-group" id="editShortLinkGroup" style="margin-bottom: 16px; display:none;">
                     <label class="form-label" for="editExternalUrl">Enlace del corto</label>
-                    <input type="url" class="form-input" id="editExternalUrl" placeholder="https://youtube.com/...">
+                    <input type="url" class="form-input" id="editExternalUrl" placeholder="https://youtube.com/..." oninput="syncShortVideoThumbnail('edit')">
                 </div>
 
                 <div class="form-group">
@@ -1570,6 +1589,8 @@
             currentEditSection: null,
             newImage: null,
             editImageData: null,
+            newLinkThumbnail: null,
+            editLinkThumbnail: null,
             newImgSource: null,
             editImgSource: null,
             newImgOffset: 0.5,
@@ -1603,7 +1624,7 @@
             'itemName', 'itemSubName', 'itemSeason', 'itemEpisode', 'itemSong', 'itemImage', 'newImagePreview',
             'editName', 'editSubName', 'editSeason', 'editEpisode', 'editSong', 'editImage', 'editImagePreview',
             'newCategory', 'newOpeningNum', 'editOpeningNum', 'addItemBtn', 'saveEditBtn',
-            'editModalTitle', 'countAll', 'countWatching', 'countPlanned', 'countCompleted',
+            'editModalTitle', 'countAll', 'countWatching', 'countPlanned', 'countCompleted', 'countUnfinished',
             'newStatusGroup', 'editStatusGroup',
             'imageSearchResults', 'imageSearchStatus', 'searchImageBtn',
             'editImageSearchResults', 'editImageSearchStatus', 'editSearchImageBtn',
@@ -1635,6 +1656,7 @@
         window.selectStatus = selectStatus;
         window.searchOnlineImages = searchOnlineImages;
         window.selectOnlineImage = selectOnlineImage;
+        window.syncShortVideoThumbnail = syncShortVideoThumbnail;
         window.onCropSliderInput = onCropSliderInput;
         window.toggleQuickStatus = toggleQuickStatus;
         window.shareAnimeList = shareAnimeList;
@@ -1780,8 +1802,8 @@
         function setSourceImage(type, img) {
             const cropRow = type === 'new' ? dom.newCropRow : dom.editCropRow;
             const slider = type === 'new' ? dom.newCropSlider : dom.editCropSlider;
-            if (type === 'new') { state.newImgSource = img; state.newImgOffset = 0.5; }
-            else { state.editImgSource = img; state.editImgOffset = 0.5; }
+            if (type === 'new') { state.newImgSource = img; state.newImgOffset = 0.5; state.newLinkThumbnail = null; }
+            else { state.editImgSource = img; state.editImgOffset = 0.5; state.editLinkThumbnail = null; }
             if (slider) slider.value = 50;
             if (cropRow) cropRow.style.display = 'flex';
             applyCrop(type);
@@ -1808,7 +1830,16 @@
         }
 
         function encodeSharedList(items) {
-            const json = JSON.stringify(items.map(item => ({ n: item.name || '', r: Number(item.rating) || 0 })));
+            const json = JSON.stringify(items.map(item => {
+                const { id, ...data } = item;
+                return {
+                    ...data,
+                    name: item.name || '',
+                    categories: Array.isArray(item.categories) ? item.categories : item.category ? [item.category] : [],
+                    rating: Number(item.rating) || 0,
+                    status: item.status || 'completed'
+                };
+            }));
             const bytes = new TextEncoder().encode(json);
             let binary = '';
             bytes.forEach(byte => binary += String.fromCharCode(byte));
@@ -1828,11 +1859,41 @@
         }
 
         async function shareAnimeList() {
-            const items = state.animes.filter(item => item.status === 'completed' || item.status === 'watching');
-            if (!items.length) { alert('Añade algún anime completado o que estés viendo para compartirlo.'); return; }
-            const url = location.href.split('#')[0] + '#lista=' + encodeSharedList(items);
-            try { await navigator.clipboard.writeText(url); alert('Enlace corto copiado al portapapeles.'); }
-            catch (_) { prompt('Copia este enlace para compartir tu lista:', url); }
+            updateSyncStatus('Preparando enlace...', 'syncing');
+            try {
+                const uid = state.currentUser.uid;
+                const [animesSnapshot, moviesSnapshot] = await Promise.all([
+                    getDocs(collection(db, 'users', uid, 'animes')),
+                    getDocs(collection(db, 'users', uid, 'movies'))
+                ]);
+                const animes = animesSnapshot.docs.map(snapshot => {
+                    const item = snapshot.data();
+                    return { ...item, contentSection: item.contentSection || 'series' };
+                });
+                const movies = moviesSnapshot.docs.map(snapshot => {
+                    const item = snapshot.data();
+                    return { ...item, contentSection: item.contentSection || 'movies' };
+                });
+                const items = [...animes, ...movies];
+                if (!items.length) {
+                    updateSyncStatus('Sin elementos', '');
+                    alert('No hay elementos guardados para compartir.');
+                    return;
+                }
+
+                const url = location.href.split('#')[0] + '#lista=' + encodeSharedList(items);
+                try {
+                    await navigator.clipboard.writeText(url);
+                    alert('Enlace actualizado copiado al portapapeles.');
+                } catch (_) {
+                    prompt('Copia este enlace actualizado para compartir todos tus elementos:', url);
+                }
+                updateSyncStatus('Enlace listo', '');
+            } catch (error) {
+                console.error('[v0] Share list refresh failed:', error);
+                updateSyncStatus('Error', 'offline');
+                alert(`No se pudo actualizar la lista para compartir: ${error.code || error.message || 'error desconocido'}`);
+            }
         }
 
         function renderSharedView(items) {
@@ -1841,8 +1902,17 @@
             document.querySelector('header').style.display = 'none';
             document.querySelector('body > main').style.display = 'none';
             dom.sharedView.style.display = 'block';
-            dom.sharedSubtitle.textContent = items.length + ' anime compartido' + (items.length === 1 ? '' : 's');
-            dom.sharedCards.innerHTML = items.map(item => `<article class="card"><div class="card-body"><h2 class="card-title">${escapeHtml(item.n)}</h2><div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > item.r ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${item.r ? item.r + '/5 estrellas' : 'Sin valoración'}</div></div></article>`).join('');
+            dom.sharedSubtitle.textContent = items.length + ' elemento' + (items.length === 1 ? '' : 's') + ' compartido' + (items.length === 1 ? '' : 's');
+            const statuses = { watching: 'En curso', planned: 'Próximos', unfinished: 'Inacabado', completed: 'Completado' };
+            const sections = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
+            dom.sharedCards.innerHTML = items.map(item => {
+                const name = item.name || item.n || '';
+                const rating = Number(item.rating ?? item.r) || 0;
+                const categories = Array.isArray(item.categories) ? item.categories : [];
+                const image = item.image && (item.image.startsWith('data:image/') || sanitizeExternalUrl(item.image)) ? item.image : null;
+                const status = item.status || 'completed';
+                return `<article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="card-image">` : ''}<div class="card-body"><div class="card-badges"><span class="card-badge">${escapeHtml(sections[item.contentSection] || 'Elemento')}</span><span class="card-badge">${escapeHtml(statuses[status] || 'Completado')}</span></div><h2 class="card-title">${escapeHtml(name)}</h2>${categories.length ? `<div class="card-categories">${categories.map(category => `<span class="card-tag">${escapeHtml(category)}</span>`).join('')}</div>` : ''}<div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > rating ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${rating ? rating + '/5 estrellas' : 'Sin valoración'}</div>${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}</div></article>`;
+            }).join('');
         }
 
         function escapeHtml(s) {
@@ -1860,6 +1930,50 @@
             } catch (_) {
                 return null;
             }
+        }
+
+        function getYouTubeVideoId(value) {
+            try {
+                const url = new URL(value);
+                const host = url.hostname.toLowerCase().replace(/^www\./, '');
+                let videoId = null;
+                if (host === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0] || null;
+                else if (host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtube-nocookie.com') {
+                    videoId = url.searchParams.get('v') || url.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/?]+)/)?.[1] || null;
+                }
+                return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function syncShortVideoThumbnail(type) {
+            const isNew = type === 'new';
+            const linkInput = document.getElementById(isNew ? 'itemExternalUrl' : 'editExternalUrl');
+            const preview = isNew ? dom.newImagePreview : dom.editImagePreview;
+            const cropRow = isNew ? dom.newCropRow : dom.editCropRow;
+            const videoId = getYouTubeVideoId(linkInput.value.trim());
+            const imageKey = isNew ? 'newImage' : 'editImageData';
+            const thumbnailKey = isNew ? 'newLinkThumbnail' : 'editLinkThumbnail';
+            const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+
+            if (!thumbnail) {
+                if (state[thumbnailKey] && state[imageKey] === state[thumbnailKey]) {
+                    state[imageKey] = null;
+                    preview.removeAttribute('src');
+                    preview.style.display = 'none';
+                }
+                state[thumbnailKey] = null;
+                return;
+            }
+
+            state[thumbnailKey] = thumbnail;
+            state[imageKey] = thumbnail;
+            if (isNew) state.newImgSource = null;
+            else state.editImgSource = null;
+            cropRow.style.display = 'none';
+            preview.src = thumbnail;
+            preview.style.display = 'block';
         }
 
         // Loads a remote image as a CORS-clean element. Instead of assigning the proxy URL
@@ -2136,12 +2250,13 @@
             dom.countWatching.textContent = items.filter(i => i.status === 'watching').length;
             dom.countPlanned.textContent = items.filter(i => i.status === 'planned').length;
             dom.countCompleted.textContent = items.filter(i => !i.status || i.status === 'completed').length;
+            dom.countUnfinished.textContent = items.filter(i => i.status === 'unfinished').length;
         }
 
         function selectSection(section) {
             state.currentSection = section;
             // Reset category filter when switching to a section with no category bar
-            if (['watching', 'planned'].includes(section)) {
+            if (['watching', 'planned', 'unfinished'].includes(section)) {
                 state.currentCategory = 'all';
                 dom.categoryFilter.value = '';
             }
@@ -2194,7 +2309,7 @@
 
         function renderCategoryBar() {
             // Hide category bar for watching/planned sections (no category grouping needed)
-            const hiddenSections = ['watching', 'planned'];
+            const hiddenSections = ['watching', 'planned', 'unfinished'];
             if (hiddenSections.includes(state.currentSection)) {
                 dom.categoryBar.innerHTML = '';
                 dom.categoryBar.style.display = 'none';
@@ -2348,8 +2463,12 @@
         // Add Item
         async function addItem() {
             const name = dom.itemName.value.trim();
-            if (!name || state.selectedCategories.length === 0 || state.currentRating === 0) {
-                alert('Completa nombre, categoría y valoración');
+            if (!name || !state.newImage) {
+                alert('Para guardar, completa el nombre y añade una imagen.');
+                return;
+            }
+            if (state.newStatus === 'completed' && (state.selectedCategories.length === 0 || state.currentRating === 0)) {
+                alert('Para completar un elemento, añade al menos una categoría y una valoración.');
                 return;
             }
             const shortUrlInput = document.getElementById('itemExternalUrl').value.trim();
@@ -2388,7 +2507,17 @@
 
             try {
                 await setDoc(doc(db, 'users', state.currentUser.uid, ref, Date.now().toString()), data);
-                // Reset form
+            } catch (e) {
+                console.error('[v0] Firestore save failed:', e);
+                alert(`No se pudo guardar en Firestore: ${e.code || e.message || 'error desconocido'}`);
+                updateSyncStatus('Error', 'offline');
+                dom.addItemBtn.disabled = false;
+                dom.addItemBtn.textContent = 'Añadir';
+                return;
+            }
+
+            // Reset form only after Firestore confirms the write
+            try {
                 dom.itemName.value = '';
                 dom.itemSubName.value = '';
                 dom.itemSeason.value = '1';
@@ -2406,6 +2535,7 @@
                 state.currentOpenings = [];
                 state.selectedCategories = [];
                 state.newImage = null;
+                state.newLinkThumbnail = null;
                 state.newImgSource = null;
                 state.newImgOffset = 0.5;
                 state.newStatus = 'completed';
@@ -2414,22 +2544,28 @@
                 renderCategoryChips();
                 selectStatus('new', 'completed');
                 updateSyncStatus('Guardado', '');
-            } catch (e) {
-                console.error(e);
-                alert('Error al guardar');
-                updateSyncStatus('Error', 'offline');
+            } catch (uiError) {
+                console.error('[v0] Firestore saved, but form reset failed:', uiError);
+                updateSyncStatus('Guardado', '');
+            } finally {
+                dom.addItemBtn.disabled = false;
+                dom.addItemBtn.textContent = 'Añadir';
             }
-            dom.addItemBtn.disabled = false;
-            dom.addItemBtn.textContent = 'Anadir';
         }
 
         // Quick status change
         async function changeItemStatus(type, id, newStatus) {
-            updateSyncStatus('Actualizando...', 'syncing');
             const ref = type === 'anime' ? 'animes' : 'movies';
             const items = type === 'anime' ? state.animes : state.movies;
             const item = items.find(i => i.id === id);
             if (!item) return;
+            if (newStatus === 'completed' && item.status !== 'completed') {
+                editItem(type, id);
+                selectStatus('edit', 'completed');
+                updateSyncStatus('Sincronizado', '');
+                return;
+            }
+            updateSyncStatus('Actualizando...', 'syncing');
 
             const data = { ...item, status: newStatus };
             delete data.id;
@@ -2459,6 +2595,7 @@
             state.editRatingValue = item.rating;
             state.editSelectedCategories = [...(item.categories || [])];
             state.editImageData = item.image || null;
+            state.editLinkThumbnail = null;
             state.editOpenings = item.openings ? [...item.openings] : [];
             state.editStatus = item.status || 'completed';
 
@@ -2475,6 +2612,7 @@
             document.getElementById('editIsManga').checked = Boolean(item.isManga);
             document.getElementById('editShortLinkGroup').style.display = contentSection === 'shorts' ? 'block' : 'none';
             document.getElementById('editExternalUrl').value = item.externalUrl || '';
+            if (contentSection === 'shorts') syncShortVideoThumbnail('edit');
 
             if (isSeries) {
                 dom.editSeason.value = item.season || 1;
@@ -2509,8 +2647,12 @@
 
         async function saveEdit() {
             const name = dom.editName.value.trim();
-            if (!name || state.editSelectedCategories.length === 0 || state.editRatingValue === 0) {
-                alert('Completa nombre, categoría y valoración');
+            if (!name || !state.editImageData) {
+                alert('Para guardar, completa el nombre y añade una imagen.');
+                return;
+            }
+            if (state.editStatus === 'completed' && (state.editSelectedCategories.length === 0 || state.editRatingValue === 0)) {
+                alert('Para completar un elemento, añade al menos una categoría y una valoración.');
                 return;
             }
             const editUrlInput = document.getElementById('editExternalUrl').value.trim();
@@ -2551,15 +2693,23 @@
 
             try {
                 await setDoc(doc(db, 'users', state.currentUser.uid, ref, state.currentEditId), data);
-                updateSyncStatus('Guardado', '');
-                closeEditModal();
             } catch (e) {
-                console.error(e);
-                alert('Error al guardar');
+                console.error('[v0] Firestore edit failed:', e);
+                alert(`No se pudo guardar en Firestore: ${e.code || e.message || 'error desconocido'}`);
                 updateSyncStatus('Error', 'offline');
+                dom.saveEditBtn.disabled = false;
+                dom.saveEditBtn.textContent = 'Guardar';
+                return;
             }
-            dom.saveEditBtn.disabled = false;
-            dom.saveEditBtn.textContent = 'Guardar';
+            updateSyncStatus('Guardado', '');
+            try {
+                closeEditModal();
+            } catch (uiError) {
+                console.error('[v0] Firestore edit saved, but modal cleanup failed:', uiError);
+            } finally {
+                dom.saveEditBtn.disabled = false;
+                dom.saveEditBtn.textContent = 'Guardar';
+            }
         }
 
         function closeEditModal() {
@@ -2670,7 +2820,8 @@
         }
 
         function getStatusDot(status) {
-            return `<span class="card-status-dot status-dot-${status || 'completed'}" title="${{watching:'Viendo',planned:'Proximo',completed:'Completado'}[status] || 'Completado'}"></span>`;
+            const labels = { watching: 'En curso', planned: 'Próximos', unfinished: 'Inacabado', completed: 'Completado' };
+            return `<span class="card-status-dot status-dot-${status || 'completed'}" title="${labels[status] || 'Completado'}"></span>`;
         }
 
         // Toggles the quick-status dropdown on click and closes any other open one
@@ -2691,8 +2842,9 @@
 
         function getQuickStatusMenu(type, id, currentStatus) {
             const statuses = [
-                { key: 'watching', label: 'Viendo' },
-                { key: 'planned', label: 'Proximo' },
+                { key: 'watching', label: 'En curso' },
+                { key: 'planned', label: 'Próximos' },
+                { key: 'unfinished', label: 'Inacabado' },
                 { key: 'completed', label: 'Completado' }
             ];
             return `
@@ -2792,41 +2944,45 @@
             }).join('');
         }
 
-        // Backup - maintains compatibility
-        function exportBackup() {
-            const data = {
-                version: 4,
-                exportDate: new Date().toISOString(),
-                categories: state.categories,
-                animes: state.animes.map(a => ({ 
-                    name: a.name, 
-                    categories: a.categories, 
-                    rating: a.rating, 
-                    season: a.season, 
-                    episode: a.episode, 
-                    image: a.image, 
-                    openings: a.openings || [], 
-                    status: a.status || 'completed',
-                    dateAdded: a.dateAdded 
-                })),
-                movies: state.movies.map(m => ({ 
-                    name: m.name, 
-                    categories: m.categories, 
-                    rating: m.rating, 
-                    song: m.song, 
-                    image: m.image, 
-                    status: m.status || 'completed',
-                    dateAdded: m.dateAdded 
-                }))
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `animker-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            updateSyncStatus('Exportado', '');
+        // Re-read every collection so the backup includes the latest database state.
+        async function exportBackup() {
+            updateSyncStatus('Preparando exportación...', 'syncing');
+            try {
+                const uid = state.currentUser.uid;
+                const [categoriesSnapshot, animesSnapshot, moviesSnapshot] = await Promise.all([
+                    getDocs(collection(db, 'users', uid, 'categories')),
+                    getDocs(collection(db, 'users', uid, 'animes')),
+                    getDocs(collection(db, 'users', uid, 'movies'))
+                ]);
+                const readItems = (snapshot, fallbackSection) => snapshot.docs.map(entry => {
+                    const item = entry.data();
+                    return {
+                        ...item,
+                        id: entry.id,
+                        status: item.status || 'completed',
+                        contentSection: item.contentSection || fallbackSection
+                    };
+                });
+                const data = {
+                    version: 5,
+                    exportDate: new Date().toISOString(),
+                    categories: categoriesSnapshot.docs.map(entry => entry.data().name || entry.id),
+                    animes: readItems(animesSnapshot, 'series'),
+                    movies: readItems(moviesSnapshot, 'movies')
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `animker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                updateSyncStatus('Exportado', '');
+            } catch (error) {
+                console.error('[v0] Backup export failed:', error);
+                updateSyncStatus('Error', 'offline');
+                alert(`No se pudo actualizar el backup: ${error.code || error.message || 'error desconocido'}`);
+            }
         }
 
         async function importBackup(e) {
@@ -2851,15 +3007,14 @@
                     // Animes
                     for (const a of data.animes) {
                         if (!state.animes.some(x => x.name === a.name)) {
+                            const { id: backupId, ...itemData } = a;
                             await setDoc(doc(db, 'users', uid, 'animes', Date.now().toString() + Math.random().toString(36).substr(2, 5)), {
-                                name: a.name, 
-                                categories: a.categories || [a.category], 
-                                rating: a.rating, 
-                                season: a.season, 
-                                episode: a.episode, 
-                                image: a.image, 
-                                openings: a.openings || [], 
+                                ...itemData,
+                                name: a.name,
+                                categories: Array.isArray(a.categories) ? a.categories : a.category ? [a.category] : [],
+                                rating: Number(a.rating) || 0,
                                 status: a.status || 'completed',
+                                contentSection: a.contentSection || 'series',
                                 dateAdded: a.dateAdded || new Date().toISOString()
                             });
                         }
@@ -2869,13 +3024,14 @@
                     if (data.movies) {
                         for (const m of data.movies) {
                             if (!state.movies.some(x => x.name === m.name)) {
+                                const { id: backupId, ...itemData } = m;
                                 await setDoc(doc(db, 'users', uid, 'movies', Date.now().toString() + Math.random().toString(36).substr(2, 5)), {
-                                    name: m.name, 
-                                    categories: m.categories || [m.category], 
-                                    rating: m.rating, 
-                                    song: m.song, 
-                                    image: m.image, 
+                                    ...itemData,
+                                    name: m.name,
+                                    categories: Array.isArray(m.categories) ? m.categories : m.category ? [m.category] : [],
+                                    rating: Number(m.rating) || 0,
                                     status: m.status || 'completed',
+                                    contentSection: m.contentSection || (m.externalUrl ? 'shorts' : m.isManga ? 'books' : 'movies'),
                                     dateAdded: m.dateAdded || new Date().toISOString()
                                 });
                             }
