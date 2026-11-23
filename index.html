@@ -559,6 +559,8 @@
         }
 
         .card {
+            content-visibility: auto;
+            contain-intrinsic-size: 320px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -916,6 +918,17 @@
 
         .modal-footer .btn { flex: 1; }
 
+        .roulette-modal { text-align: center; }
+        .roulette-stage { min-height: 310px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+        .roulette-cover { width: 180px; height: 240px; object-fit: cover; object-position: center top; border-radius: var(--radius); background: var(--surface-hover); box-shadow: var(--shadow-lg); }
+        .roulette-name { font-size: 22px; font-weight: 700; line-height: 1.25; }
+        .roulette-stage.spinning .roulette-cover { animation: roulette-wobble .18s ease-in-out infinite alternate; filter: saturate(.75); }
+        @keyframes roulette-wobble { from { transform: rotate(-2deg) scale(.98); } to { transform: rotate(2deg) scale(1.02); } }
+        .roulette-actions { display: flex; gap: 10px; padding: 0 24px 24px; }
+        .roulette-actions .btn { flex: 1; }
+        .roulette-empty { color: var(--text-secondary); padding: 36px 20px; }
+        @media (prefers-reduced-motion: reduce) { .roulette-stage.spinning .roulette-cover { animation: none; } }
+
         /* File Input */
         .file-drop {
             border: 2px dashed var(--border);
@@ -1247,6 +1260,7 @@
                 <span>Próximos</span>
                 <span class="count" id="countPlanned">0</span>
             </button>
+            <button class="btn btn-outline btn-sm" id="rouletteButton" onclick="openRoulette()" style="display:none; align-self:center; white-space:nowrap;">Ruleta</button>
             <button class="section-tab" data-section="completed" onclick="selectSection('completed')">
                 <span class="section-indicator" style="background: var(--completed);"></span>
                 <span>Completados</span>
@@ -1435,6 +1449,24 @@
         <!-- Content List -->
         <div class="list-view" id="listView"></div>
     </main>
+
+    <div class="modal-overlay" id="rouletteModal" role="dialog" aria-modal="true" aria-labelledby="rouletteTitle" onclick="if(event.target===this)closeRoulette()">
+        <section class="modal roulette-modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="rouletteTitle">Ruleta de Próximos</h2>
+                <button class="modal-close" aria-label="Cerrar ruleta" onclick="closeRoulette()">&times;</button>
+            </div>
+            <div class="modal-body roulette-stage" id="rouletteStage">
+                <div class="roulette-empty" id="rouletteEmpty" style="display:none">No hay elementos en Próximos para esta sección.</div>
+                <img class="roulette-cover" id="rouletteImage" alt="">
+                <h3 class="roulette-name" id="rouletteName"></h3>
+            </div>
+            <div class="roulette-actions" id="rouletteActions">
+                <button class="btn btn-outline" id="rouletteReroll" onclick="rerollRoulette()">Reroll</button>
+                <button class="btn" id="rouletteMove" onclick="moveRouletteToWatching()">Agregar a en curso</button>
+            </div>
+        </section>
+    </div>
 
     <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal">
@@ -1660,6 +1692,10 @@
         window.onCropSliderInput = onCropSliderInput;
         window.toggleQuickStatus = toggleQuickStatus;
         window.shareAnimeList = shareAnimeList;
+        window.openRoulette = openRoulette;
+        window.closeRoulette = closeRoulette;
+        window.rerollRoulette = rerollRoulette;
+        window.moveRouletteToWatching = moveRouletteToWatching;
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
@@ -1911,7 +1947,7 @@
                 const categories = Array.isArray(item.categories) ? item.categories : [];
                 const image = item.image && (item.image.startsWith('data:image/') || sanitizeExternalUrl(item.image)) ? item.image : null;
                 const status = item.status || 'completed';
-                return `<article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="card-image">` : ''}<div class="card-body"><div class="card-badges"><span class="card-badge">${escapeHtml(sections[item.contentSection] || 'Elemento')}</span><span class="card-badge">${escapeHtml(statuses[status] || 'Completado')}</span></div><h2 class="card-title">${escapeHtml(name)}</h2>${categories.length ? `<div class="card-categories">${categories.map(category => `<span class="card-tag">${escapeHtml(category)}</span>`).join('')}</div>` : ''}<div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > rating ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${rating ? rating + '/5 estrellas' : 'Sin valoración'}</div>${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}</div></article>`;
+                return `<article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="card-image" loading="lazy" decoding="async">` : ''}<div class="card-body"><div class="card-badges"><span class="card-badge">${escapeHtml(sections[item.contentSection] || 'Elemento')}</span><span class="card-badge">${escapeHtml(statuses[status] || 'Completado')}</span></div><h2 class="card-title">${escapeHtml(name)}</h2>${categories.length ? `<div class="card-categories">${categories.map(category => `<span class="card-tag">${escapeHtml(category)}</span>`).join('')}</div>` : ''}<div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > rating ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${rating ? rating + '/5 estrellas' : 'Sin valoración'}</div>${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}</div></article>`;
             }).join('');
         }
 
@@ -2255,6 +2291,7 @@
 
         function selectSection(section) {
             state.currentSection = section;
+            document.getElementById('rouletteButton').style.display = section === 'planned' ? 'inline-flex' : 'none';
             // Reset category filter when switching to a section with no category bar
             if (['watching', 'planned', 'unfinished'].includes(section)) {
                 state.currentCategory = 'all';
@@ -2814,9 +2851,109 @@
             return items.sort((a, b) => b.rating - a.rating);
         }
 
+        let renderGeneration = 0;
         function render() {
             const items = getFilteredItems();
-            state.currentView === 'grid' ? renderGrid(items) : renderList(items);
+            const generation = ++renderGeneration;
+            const renderChunk = state.currentView === 'grid' ? renderGrid : renderList;
+            renderChunk(items.slice(0, 24), false);
+            let offset = 24;
+            const appendNextChunk = () => {
+                if (generation !== renderGeneration || offset >= items.length) return;
+                renderChunk(items.slice(offset, offset + 24), true);
+                offset += 24;
+                if ('requestIdleCallback' in window) requestIdleCallback(appendNextChunk, { timeout: 250 });
+                else setTimeout(appendNextChunk, 32);
+            };
+            if (items.length > 24) {
+                if ('requestIdleCallback' in window) requestIdleCallback(appendNextChunk, { timeout: 250 });
+                else setTimeout(appendNextChunk, 32);
+            }
+        }
+
+        let rouletteSelection = null;
+        let rouletteCandidates = [];
+        let rouletteTimer = null;
+
+        function getRouletteCandidates() {
+            const source = state.currentContentType === 'series' ? state.animes : state.movies;
+            const defaultSection = state.currentContentType === 'series' ? 'series' : 'movies';
+            return source.filter(item => (item.contentSection || defaultSection) === state.currentContentType && item.status === 'planned');
+        }
+
+        function showRouletteItem(item) {
+            rouletteSelection = item;
+            const image = document.getElementById('rouletteImage');
+            const empty = document.getElementById('rouletteEmpty');
+            const stage = document.getElementById('rouletteStage');
+            empty.style.display = 'none';
+            image.style.display = item.image ? 'block' : 'none';
+            image.src = item.image || '';
+            image.alt = item.image ? `Portada de ${item.name || 'elemento'}` : '';
+            document.getElementById('rouletteName').textContent = item.name || 'Sin título';
+            document.getElementById('rouletteActions').style.display = 'flex';
+            stage.classList.remove('spinning');
+        }
+
+        function openRoulette() {
+            if (state.currentSection !== 'planned') selectSection('planned');
+            rouletteCandidates = getRouletteCandidates();
+            document.getElementById('rouletteModal').classList.add('active');
+            const empty = document.getElementById('rouletteEmpty');
+            const image = document.getElementById('rouletteImage');
+            const name = document.getElementById('rouletteName');
+            const actions = document.getElementById('rouletteActions');
+            if (!rouletteCandidates.length) {
+                empty.style.display = 'block';
+                image.style.display = 'none';
+                name.textContent = '';
+                actions.style.display = 'none';
+                return;
+            }
+            showRouletteItem(rouletteCandidates[Math.floor(Math.random() * rouletteCandidates.length)]);
+            rerollRoulette();
+        }
+
+        function rerollRoulette() {
+            if (!rouletteCandidates.length) rouletteCandidates = getRouletteCandidates();
+            if (!rouletteCandidates.length) return;
+            const eligible = rouletteCandidates.length > 1
+                ? rouletteCandidates.filter(item => item.id !== rouletteSelection?.id)
+                : rouletteCandidates;
+            const finalPick = eligible[Math.floor(Math.random() * eligible.length)];
+            const stage = document.getElementById('rouletteStage');
+            const image = document.getElementById('rouletteImage');
+            const name = document.getElementById('rouletteName');
+            window.clearInterval(rouletteTimer);
+            stage.classList.add('spinning');
+            document.getElementById('rouletteReroll').disabled = true;
+            document.getElementById('rouletteMove').disabled = true;
+            let ticks = 0;
+            rouletteTimer = window.setInterval(() => {
+                const preview = rouletteCandidates[Math.floor(Math.random() * rouletteCandidates.length)];
+                image.style.display = preview.image ? 'block' : 'none';
+                image.src = preview.image || '';
+                image.alt = preview.image ? `Portada de ${preview.name || 'elemento'}` : '';
+                name.textContent = preview.name || 'Sin título';
+                if (++ticks >= 12) {
+                    window.clearInterval(rouletteTimer);
+                    showRouletteItem(finalPick);
+                    document.getElementById('rouletteReroll').disabled = false;
+                    document.getElementById('rouletteMove').disabled = false;
+                }
+            }, 90);
+        }
+
+        function closeRoulette() {
+            window.clearInterval(rouletteTimer);
+            document.getElementById('rouletteModal').classList.remove('active');
+        }
+
+        async function moveRouletteToWatching() {
+            if (!rouletteSelection) return;
+            const item = rouletteSelection;
+            await changeItemStatus(state.currentContentType === 'series' ? 'anime' : 'movie', item.id, 'watching');
+            closeRoulette();
         }
 
         function getStatusDot(status) {
@@ -2862,7 +2999,7 @@
             `;
         }
 
-        function renderGrid(items) {
+        function renderGrid(items, append = false) {
             const isSeries = state.currentContentType === 'series';
             const type = isSeries ? 'anime' : 'movie';
             const sectionNames = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
@@ -2872,7 +3009,7 @@
                 return;
             }
 
-            dom.cardsGrid.innerHTML = items.map(item => {
+            const html = items.map(item => {
                 const cats = (item.categories || []).map(c => `<span class="card-tag">${c}</span>`).join('');
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
                 const status = item.status || 'completed';
@@ -2888,7 +3025,7 @@
                 return `
                     <div class="card">
                         ${getQuickStatusMenu(type, item.id, status)}
-                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image">` : `<div class="card-placeholder">Sin imagen</div>`}
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image" loading="lazy" decoding="async">` : `<div class="card-placeholder">Sin imagen</div>`}
                         <div class="card-body">
                             <div class="card-badges"><span class="card-badge">${sectionNames[item.contentSection || (isSeries ? 'series' : 'movies')] || 'Elemento'}</span>${item.isAnime ? '<span class="card-badge">Anime</span>' : ''}${item.isManga ? '<span class="card-badge">Manga</span>' : ''}</div>
                             <h3 class="card-title">${getStatusDot(status)} ${escapeHtml(item.name)}</h3>
@@ -2905,9 +3042,11 @@
                     </div>
                 `;
             }).join('');
+            if (append) dom.cardsGrid.insertAdjacentHTML('beforeend', html);
+            else dom.cardsGrid.innerHTML = html;
         }
 
-        function renderList(items) {
+        function renderList(items, append = false) {
             const isSeries = state.currentContentType === 'series';
             const type = isSeries ? 'anime' : 'movie';
 
@@ -2916,7 +3055,7 @@
                 return;
             }
 
-            dom.listView.innerHTML = items.map(item => {
+            const html = items.map(item => {
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
                 const meta = isSeries && item.season != null && item.episode != null
                     ? `T${item.season} - Ep. ${item.episode}`
@@ -2942,6 +3081,8 @@
                     </div>
                 `;
             }).join('');
+            if (append) dom.listView.insertAdjacentHTML('beforeend', html);
+            else dom.listView.innerHTML = html;
         }
 
         // Re-read every collection so the backup includes the latest database state.
