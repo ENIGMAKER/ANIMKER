@@ -152,6 +152,7 @@
         }
 
         .header-content {
+            position: relative;
             max-width: 1400px;
             margin: 0 auto;
             padding: 0 24px;
@@ -174,11 +175,10 @@
             cursor: pointer;
             transition: transform .28s ease, color .28s ease, letter-spacing .28s ease;
         }
-        .logo:hover { transform: translateY(-1px); letter-spacing: .2px; }
+        .logo:hover { transform: none; letter-spacing: -0.5px; }
         .logo:focus-visible { outline: 2px solid var(--watching); outline-offset: 4px; border-radius: 4px; }
         body.brand-transition .main { animation: brand-content-in .42s ease both; }
         body.brand-transition .logo { animation: brand-logo-in .42s cubic-bezier(.2,.8,.2,1) both; }
-        body.animker-mode .logo { color: var(--watching); }
         @keyframes brand-content-in { from { opacity: .55; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes brand-logo-in { 0% { transform: scale(.94); opacity: .55; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
         @media (prefers-reduced-motion: reduce) {
@@ -186,7 +186,10 @@
         }
 
         .header-center {
-            flex: 1;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             display: flex;
             align-items: center;
             justify-content: center;
