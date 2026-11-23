@@ -163,9 +163,26 @@
         }
 
         .logo {
+            border: 0;
+            padding: 8px 0;
+            background: transparent;
+            color: var(--text);
+            font: inherit;
             font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.5px;
+            cursor: pointer;
+            transition: transform .28s ease, color .28s ease, letter-spacing .28s ease;
+        }
+        .logo:hover { transform: translateY(-1px); letter-spacing: .2px; }
+        .logo:focus-visible { outline: 2px solid var(--watching); outline-offset: 4px; border-radius: 4px; }
+        body.brand-transition .main { animation: brand-content-in .42s ease both; }
+        body.brand-transition .logo { animation: brand-logo-in .42s cubic-bezier(.2,.8,.2,1) both; }
+        body.animker-mode .logo { color: var(--watching); }
+        @keyframes brand-content-in { from { opacity: .55; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes brand-logo-in { 0% { transform: scale(.94); opacity: .55; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .logo, body.brand-transition .main, body.brand-transition .logo { animation: none; transition: none; }
         }
 
         .header-center {
@@ -920,7 +937,7 @@
 
         .roulette-modal { text-align: center; }
         .roulette-stage { min-height: 310px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
-        .roulette-cover { width: 180px; height: 240px; object-fit: cover; object-position: center top; border-radius: var(--radius); background: var(--surface-hover); box-shadow: var(--shadow-lg); }
+        .roulette-cover { width: min(400px, 100%); aspect-ratio: 2 / 1; height: auto; object-fit: cover; object-position: center; border-radius: var(--radius); background: var(--surface-hover); box-shadow: var(--shadow-lg); }
         .roulette-name { font-size: 22px; font-weight: 700; line-height: 1.25; }
         .roulette-stage.spinning .roulette-cover { animation: roulette-wobble .18s ease-in-out infinite alternate; filter: saturate(.75); }
         @keyframes roulette-wobble { from { transform: rotate(-2deg) scale(.98); } to { transform: rotate(2deg) scale(1.02); } }
@@ -1185,7 +1202,7 @@
 
     <header class="header">
         <div class="header-content">
-            <div class="logo">NAKERTIVE</div>
+            <button type="button" class="logo" id="brandToggle" onclick="toggleBrandMode()" aria-label="Cambiar a modo ANIMKER" aria-pressed="false">NAKERTIVE</button>
             <div class="header-center">
                 <nav class="nav-tabs">
                     <button class="nav-tab active" id="tabAnimes" onclick="switchContentType('series')">Series</button>
@@ -1637,6 +1654,7 @@
             editSelectedCategories: [],
             isDarkMode: false,
             currentContentType: 'series',
+            brandMode: 'nakertive',
             newStatus: 'completed',
             editStatus: 'completed'
         };
@@ -1696,6 +1714,7 @@
         window.closeRoulette = closeRoulette;
         window.rerollRoulette = rerollRoulette;
         window.moveRouletteToWatching = moveRouletteToWatching;
+        window.toggleBrandMode = toggleBrandMode;
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
@@ -1739,11 +1758,13 @@
         }
 
         // Auth
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(auth, async user => {
             if (user) {
                 state.currentUser = user;
                 dom.loginOverlay.style.display = 'none';
                 dom.userAvatar.src = user.photoURL || '/placeholder.svg';
+                await loadBrandMode(user);
+                if (state.currentUser?.uid !== user.uid) return;
                 setupListeners();
                 loadData();
             } else {
@@ -1752,6 +1773,51 @@
                 [unsubscribeAnimes, unsubscribeCategories, unsubscribeMovies].forEach(fn => fn?.());
             }
         });
+
+        async function loadBrandMode(user) {
+            try {
+                const profile = await getDoc(doc(db, 'users', user.uid));
+                state.brandMode = profile.exists() && profile.data().brandMode === 'animker' ? 'animker' : 'nakertive';
+            } catch (error) {
+                console.error('[v0] Could not load brand mode preference:', error);
+                state.brandMode = 'nakertive';
+            }
+            applyBrandMode();
+        }
+
+        function applyBrandMode() {
+            const isAnimker = state.brandMode === 'animker';
+            const logo = document.getElementById('brandToggle');
+            document.body.classList.toggle('animker-mode', isAnimker);
+            document.title = `${isAnimker ? 'ANIMKER' : 'NAKERTIVE'} · Tu biblioteca personal`;
+            if (logo) {
+                logo.textContent = isAnimker ? 'ANIMKER' : 'NAKERTIVE';
+                logo.setAttribute('aria-pressed', String(isAnimker));
+                logo.setAttribute('aria-label', `Cambiar a modo ${isAnimker ? 'NAKERTIVE' : 'ANIMKER'}`);
+            }
+            renderCategoryBar();
+            updateSectionCounts();
+            render();
+        }
+
+        async function toggleBrandMode() {
+            if (!state.currentUser) return;
+            const previousMode = state.brandMode;
+            state.brandMode = previousMode === 'animker' ? 'nakertive' : 'animker';
+            document.body.classList.add('brand-transition');
+            applyBrandMode();
+            window.setTimeout(() => document.body.classList.remove('brand-transition'), 450);
+            try {
+                await setDoc(doc(db, 'users', state.currentUser.uid), { brandMode: state.brandMode }, { merge: true });
+                updateSyncStatus('Preferencia guardada', '');
+            } catch (error) {
+                console.error('[v0] Could not save brand mode preference:', error);
+                state.brandMode = previousMode;
+                applyBrandMode();
+                updateSyncStatus('Error al guardar modo', 'offline');
+                alert('No se pudo guardar el modo de visualización. Comprueba tu conexión e inténtalo de nuevo.');
+            }
+        }
 
         function setupListeners() {
             // Stars - using event delegation
@@ -2281,7 +2347,8 @@
 
         function updateSectionCounts() {
             const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
-            const items = baseItems.filter(item => (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType);
+            let items = baseItems.filter(item => (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType);
+            if (state.brandMode === 'animker') items = items.filter(item => item.isAnime === true || item.isManga === true);
             dom.countAll.textContent = items.length;
             dom.countWatching.textContent = items.filter(i => i.status === 'watching').length;
             dom.countPlanned.textContent = items.filter(i => i.status === 'planned').length;
@@ -2355,9 +2422,10 @@
             dom.categoryBar.style.display = 'flex';
 
             const baseItems = state.currentContentType === 'series' ? state.animes : state.movies;
-            const sectionItems = baseItems.filter(item =>
+            let sectionItems = baseItems.filter(item =>
                 (item.contentSection || (state.currentContentType === 'series' ? 'series' : 'movies')) === state.currentContentType
             );
+            if (state.brandMode === 'animker') sectionItems = sectionItems.filter(item => item.isAnime === true || item.isManga === true);
             const filteredBySection = state.currentSection === 'all'
                 ? sectionItems
                 : sectionItems.filter(i => (i.status || 'completed') === state.currentSection);
@@ -2828,6 +2896,7 @@
             let items = ['series'].includes(state.currentContentType) ? state.animes : state.movies;
             const legacySection = state.currentContentType === 'series' ? 'series' : 'movies';
             items = items.filter(item => (item.contentSection || legacySection) === state.currentContentType);
+            if (state.brandMode === 'animker') items = items.filter(item => item.isAnime === true || item.isManga === true);
             
             // Filter by status section
             if (state.currentSection !== 'all') {
@@ -2878,7 +2947,11 @@
         function getRouletteCandidates() {
             const source = state.currentContentType === 'series' ? state.animes : state.movies;
             const defaultSection = state.currentContentType === 'series' ? 'series' : 'movies';
-            return source.filter(item => (item.contentSection || defaultSection) === state.currentContentType && item.status === 'planned');
+            return source.filter(item =>
+                (item.contentSection || defaultSection) === state.currentContentType &&
+                item.status === 'planned' &&
+                (state.brandMode !== 'animker' || item.isAnime === true || item.isManga === true)
+            );
         }
 
         function showRouletteItem(item) {
