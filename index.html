@@ -1744,12 +1744,24 @@
         window.toggleBrandMode = toggleBrandMode;
 
         // Init
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             cacheDom();
             loadTheme();
             setupMobileNav();
-            const sharedItems = getSharedListFromUrl();
-            if (sharedItems) renderSharedView(sharedItems);
+            const sharedLink = getSharedListFromUrl();
+            if (!sharedLink) return;
+            if (sharedLink.items) {
+                renderSharedView(sharedLink.items);
+                return;
+            }
+            try {
+                const items = await loadSharedList(sharedLink.shareId);
+                if (items?.length) renderSharedView(items);
+                else alert('Este enlace compartido ya no existe o está vacío.');
+            } catch (error) {
+                console.error('[v0] Shared list load failed:', error);
+                alert(`No se pudo cargar la lista compartida: ${error.code || error.message || 'comprueba las reglas de lectura de Firestore'}`);
+            }
         });
 
         function cacheDom() {
@@ -1967,23 +1979,6 @@
             reader.readAsDataURL(file);
         }
 
-        function encodeSharedList(items) {
-            const json = JSON.stringify(items.map(item => {
-                const { id, ...data } = item;
-                return {
-                    ...data,
-                    name: item.name || '',
-                    categories: Array.isArray(item.categories) ? item.categories : item.category ? [item.category] : [],
-                    rating: Number(item.rating) || 0,
-                    status: item.status || 'completed'
-                };
-            }));
-            const bytes = new TextEncoder().encode(json);
-            let binary = '';
-            bytes.forEach(byte => binary += String.fromCharCode(byte));
-            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-        }
-
         function decodeSharedList(value) {
             try {
                 const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
@@ -1992,8 +1987,27 @@
         }
 
         function getSharedListFromUrl() {
-            const match = location.hash.match(/^#lista=([A-Za-z0-9_-]+)$/);
-            return match ? decodeSharedList(match[1]) : null;
+            const shortLink = location.hash.match(/^#l=([A-Za-z0-9_-]{22})$/);
+            if (shortLink) return { shareId: shortLink[1] };
+            const legacyLink = location.hash.match(/^#lista=([A-Za-z0-9_-]+)$/);
+            return legacyLink ? { items: decodeSharedList(legacyLink[1]) } : null;
+        }
+
+        function createShareId() {
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        async function loadSharedList(shareId) {
+            const shareRef = doc(db, 'publicShares', shareId);
+            const shareSnapshot = await getDoc(shareRef);
+            if (!shareSnapshot.exists()) return null;
+            const itemsSnapshot = await getDocs(collection(db, 'publicShares', shareId, 'items'));
+            return itemsSnapshot.docs
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .map(snapshot => snapshot.data());
         }
 
         async function shareAnimeList() {
@@ -2004,33 +2018,52 @@
                     getDocs(collection(db, 'users', uid, 'animes')),
                     getDocs(collection(db, 'users', uid, 'movies'))
                 ]);
-                const animes = animesSnapshot.docs.map(snapshot => {
-                    const item = snapshot.data();
-                    return { ...item, contentSection: item.contentSection || 'series' };
-                });
-                const movies = moviesSnapshot.docs.map(snapshot => {
-                    const item = snapshot.data();
-                    return { ...item, contentSection: item.contentSection || 'movies' };
-                });
-                const items = [...animes, ...movies];
+                const items = [
+                    ...animesSnapshot.docs.map(snapshot => ({ ...snapshot.data(), contentSection: snapshot.data().contentSection || 'series' })),
+                    ...moviesSnapshot.docs.map(snapshot => ({ ...snapshot.data(), contentSection: snapshot.data().contentSection || 'movies' }))
+                ];
                 if (!items.length) {
                     updateSyncStatus('Sin elementos', '');
                     alert('No hay elementos guardados para compartir.');
                     return;
                 }
 
-                const url = location.href.split('#')[0] + '#lista=' + encodeSharedList(items);
+                let shareId;
+                let shareRef;
+                do {
+                    shareId = createShareId();
+                    shareRef = doc(db, 'publicShares', shareId);
+                } while ((await getDoc(shareRef)).exists());
+
+                await setDoc(shareRef, { ownerId: uid, itemCount: items.length, createdAt: new Date().toISOString() });
+                for (let start = 0; start < items.length; start += 20) {
+                    const writes = items.slice(start, start + 20).map((item, offset) => {
+                        const { id, ...data } = item;
+                        const sharedItem = {
+                            ...data,
+                            image: typeof data.image === 'string' && data.image.startsWith('data:image/') ? null : data.image || null,
+                            name: item.name || '',
+                            categories: Array.isArray(item.categories) ? item.categories : item.category ? [item.category] : [],
+                            rating: Number(item.rating) || 0,
+                            status: item.status || 'completed'
+                        };
+                        return setDoc(doc(db, 'publicShares', shareId, 'items', String(start + offset).padStart(6, '0')), sharedItem);
+                    });
+                    await Promise.all(writes);
+                }
+
+                const url = location.href.split('#')[0] + '#l=' + shareId;
                 try {
                     await navigator.clipboard.writeText(url);
-                    alert('Enlace actualizado copiado al portapapeles.');
+                    alert('Enlace corto copiado al portapapeles.');
                 } catch (_) {
-                    prompt('Copia este enlace actualizado para compartir todos tus elementos:', url);
+                    prompt('Copia este enlace corto para compartir tu lista:', url);
                 }
                 updateSyncStatus('Enlace listo', '');
             } catch (error) {
                 console.error('[v0] Share list refresh failed:', error);
                 updateSyncStatus('Error', 'offline');
-                alert(`No se pudo actualizar la lista para compartir: ${error.code || error.message || 'error desconocido'}`);
+                alert(`No se pudo crear el enlace: ${error.code || error.message || 'error desconocido'}. Comprueba las reglas de Firestore para publicShares.`);
             }
         }
 
