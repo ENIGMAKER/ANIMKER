@@ -574,9 +574,10 @@
         /* Cards Grid */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 20px;
         }
+        .cards-grid.books-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 
         .card {
             content-visibility: auto;
@@ -3160,6 +3161,8 @@
 
         function renderGrid(items, append = false) {
             const isSeries = state.currentContentType === 'series';
+            const isBooks = state.currentContentType === 'books';
+            dom.cardsGrid.classList.toggle('books-grid', isBooks);
             const type = isSeries ? 'anime' : 'movie';
             const sectionNames = { series: 'Serie', movies: 'Película', shorts: 'Corto', books: 'Libro' };
 
