@@ -601,6 +601,8 @@
             object-position: center top;
             background: var(--surface-hover);
         }
+        .card-image.book-card-image { height: auto; aspect-ratio: 2 / 3; object-position: center; }
+        .card-placeholder.book-card-placeholder { height: auto; aspect-ratio: 2 / 3; }
 
         .card-placeholder {
             width: 100%;
@@ -816,6 +818,7 @@
             background: var(--surface-hover);
             flex-shrink: 0;
         }
+        .list-thumb.book-list-thumb { width: 48px; height: 72px; aspect-ratio: 2 / 3; }
 
         .list-info { flex: 1; min-width: 0; }
 
@@ -983,6 +986,7 @@
             background: var(--surface-hover);
             display: block;
         }
+        .preview-img.book-cover-preview { width: min(200px, 100%); height: auto; aspect-ratio: 2 / 3; object-fit: contain; }
 
         /* Online image search */
         .img-search-bar {
@@ -1368,6 +1372,13 @@
                     <label class="form-label">Episodio</label>
                     <input type="number" class="form-input" id="itemEpisode" value="1" min="0">
                 </div>
+                <div class="form-group" id="bookVolumeGroup" style="display: none;">
+                    <label class="form-label" for="itemBookVolume">Tomo actual</label>
+                    <input type="number" class="form-input" id="itemBookVolume" value="1" min="1" step="1">
+                </div>
+                <div class="form-group" id="bookOneShotGroup" style="display: none; align-self: end;">
+                    <label class="chip"><input type="checkbox" id="itemIsOneShot" onchange="toggleOneShot('new')"> Tomo único</label>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Valoracion</label>
                     <div class="stars" id="newRating">
@@ -1516,6 +1527,15 @@
                         <input type="number" class="form-input" id="editEpisode" min="0">
                     </div>
                 </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;" id="editBookVolumeGroup" hidden>
+                    <div class="form-group">
+                        <label class="form-label" for="editBookVolume">Tomo actual</label>
+                        <input type="number" class="form-input" id="editBookVolume" min="1" step="1">
+                    </div>
+                    <div class="form-group" style="align-self: end;">
+                        <label class="chip"><input type="checkbox" id="editIsOneShot" onchange="toggleOneShot('edit')"> Tomo único</label>
+                    </div>
+                </div>
                 <div class="form-group" id="editFormatOptions" style="margin-bottom: 16px;">
                     <label class="form-label">Formato</label>
                     <div class="chips">
@@ -1643,6 +1663,8 @@
             editImageData: null,
             newLinkThumbnail: null,
             editLinkThumbnail: null,
+            newThumbnailRequest: 0,
+            editThumbnailRequest: 0,
             newImgSource: null,
             editImgSource: null,
             newImgOffset: 0.5,
@@ -1689,6 +1711,7 @@
         window.signOut = () => firebaseSignOut(auth);
         window.toggleDarkMode = toggleDarkMode;
         window.switchContentType = switchContentType;
+        window.toggleOneShot = toggleOneShot;
         window.switchView = switchView;
         window.togglePanel = togglePanel;
         window.addCategory = addCategory;
@@ -1851,20 +1874,18 @@
             dom.editModal.addEventListener('click', e => e.target === dom.editModal && closeEditModal());
         }
 
-        // Shared compression: crops to 400x200 (2:1) and exports JPEG @ 0.8.
-        // `offset` (0..1) controls which part of the cropped axis is kept:
-        //   for tall images it is the vertical position (0=top, 0.5=center, 1=bottom),
-        //   for wide images it is the horizontal position.
-        function compressImageElement(img, offset) {
+        // Crops to the target section ratio and exports JPEG @ 0.8.
+        // `offset` (0..1) controls the crop position along the axis being cropped.
+        function compressImageElement(img, offset, contentSection) {
             if (offset == null) offset = 0.5;
             offset = Math.max(0, Math.min(1, offset));
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-
-            const TARGET_WIDTH = 400;
-            const TARGET_HEIGHT = 200;
-            const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT; // 2:1
+            const isBook = contentSection === 'books';
+            const TARGET_WIDTH = isBook ? 200 : 400;
+            const TARGET_HEIGHT = isBook ? 300 : 200;
+            const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
 
             let cropWidth, cropHeight, cropX, cropY;
             const srcRatio = img.width / img.height;
@@ -1896,7 +1917,9 @@
             if (!src) return;
             const offset = type === 'new' ? state.newImgOffset : state.editImgOffset;
             const previewEl = type === 'new' ? dom.newImagePreview : dom.editImagePreview;
-            const compressed = compressImageElement(src, offset);
+            const contentSection = type === 'new' ? state.currentContentType : state.currentEditSection;
+            const compressed = compressImageElement(src, offset, contentSection);
+            previewEl.classList.toggle('book-cover-preview', contentSection === 'books');
             previewEl.src = compressed;
             previewEl.style.display = 'block';
             if (type === 'new') state.newImage = compressed;
@@ -1907,8 +1930,17 @@
         function setSourceImage(type, img) {
             const cropRow = type === 'new' ? dom.newCropRow : dom.editCropRow;
             const slider = type === 'new' ? dom.newCropSlider : dom.editCropSlider;
-            if (type === 'new') { state.newImgSource = img; state.newImgOffset = 0.5; state.newLinkThumbnail = null; }
-            else { state.editImgSource = img; state.editImgOffset = 0.5; state.editLinkThumbnail = null; }
+            if (type === 'new') {
+                state.newThumbnailRequest++;
+                state.newImgSource = img;
+                state.newImgOffset = 0.5;
+                state.newLinkThumbnail = null;
+            } else {
+                state.editThumbnailRequest++;
+                state.editImgSource = img;
+                state.editImgOffset = 0.5;
+                state.editLinkThumbnail = null;
+            }
             if (slider) slider.value = 50;
             if (cropRow) cropRow.style.display = 'flex';
             applyCrop(type);
@@ -2016,7 +2048,9 @@
                 const categories = Array.isArray(item.categories) ? item.categories : [];
                 const image = item.image && (item.image.startsWith('data:image/') || sanitizeExternalUrl(item.image)) ? item.image : null;
                 const status = item.status || 'completed';
-                return `<article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="card-image" loading="lazy" decoding="async">` : ''}<div class="card-body"><div class="card-badges"><span class="card-badge">${escapeHtml(sections[item.contentSection] || 'Elemento')}</span><span class="card-badge">${escapeHtml(statuses[status] || 'Completado')}</span></div><h2 class="card-title">${escapeHtml(name)}</h2>${categories.length ? `<div class="card-categories">${categories.map(category => `<span class="card-tag">${escapeHtml(category)}</span>`).join('')}</div>` : ''}<div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > rating ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${rating ? rating + '/5 estrellas' : 'Sin valoración'}</div>${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}</div></article>`;
+                const isBook = item.contentSection === 'books';
+                const bookVolumeLabel = item.isOneShot ? 'Tomo único' : `Tomo ${Number(item.volume) || 1}`;
+                return `<article class="card">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="card-image ${isBook ? 'book-card-image' : ''}" loading="lazy" decoding="async">` : ''}<div class="card-body"><div class="card-badges"><span class="card-badge">${escapeHtml(sections[item.contentSection] || 'Elemento')}</span><span class="card-badge">${escapeHtml(statuses[status] || 'Completado')}</span></div><h2 class="card-title">${escapeHtml(name)}</h2>${categories.length ? `<div class="card-categories">${categories.map(category => `<span class="card-tag">${escapeHtml(category)}</span>`).join('')}</div>` : ''}${isBook ? `<div class="card-meta">${bookVolumeLabel}</div>` : ''}<div class="card-stars">${[1,2,3,4,5].map(i => `<span class="${i > rating ? 'empty' : ''}">★</span>`).join('')}</div><div class="card-meta">${rating ? rating + '/5 estrellas' : 'Sin valoración'}</div>${item.externalUrl ? `<a class="btn btn-outline btn-sm" href="${escapeHtml(sanitizeExternalUrl(item.externalUrl) || '#')}" target="_blank" rel="noopener noreferrer">Abrir enlace</a>` : ''}</div></article>`;
             }).join('');
         }
 
@@ -2052,33 +2086,58 @@
             }
         }
 
-        function syncShortVideoThumbnail(type) {
+        async function syncShortVideoThumbnail(type) {
             const isNew = type === 'new';
             const linkInput = document.getElementById(isNew ? 'itemExternalUrl' : 'editExternalUrl');
             const preview = isNew ? dom.newImagePreview : dom.editImagePreview;
             const cropRow = isNew ? dom.newCropRow : dom.editCropRow;
+            const slider = isNew ? dom.newCropSlider : dom.editCropSlider;
             const videoId = getYouTubeVideoId(linkInput.value.trim());
             const imageKey = isNew ? 'newImage' : 'editImageData';
+            const sourceKey = isNew ? 'newImgSource' : 'editImgSource';
+            const offsetKey = isNew ? 'newImgOffset' : 'editImgOffset';
             const thumbnailKey = isNew ? 'newLinkThumbnail' : 'editLinkThumbnail';
+            const requestKey = isNew ? 'newThumbnailRequest' : 'editThumbnailRequest';
             const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+            const requestId = ++state[requestKey];
 
             if (!thumbnail) {
-                if (state[thumbnailKey] && state[imageKey] === state[thumbnailKey]) {
+                if (state[thumbnailKey]) {
                     state[imageKey] = null;
+                    state[sourceKey] = null;
                     preview.removeAttribute('src');
                     preview.style.display = 'none';
+                    cropRow.style.display = 'none';
                 }
                 state[thumbnailKey] = null;
                 return;
             }
 
+            const isDifferentThumbnail = state[thumbnailKey] !== thumbnail;
+            if (isDifferentThumbnail) {
+                state[offsetKey] = 0.5;
+                if (slider) slider.value = 50;
+            }
             state[thumbnailKey] = thumbnail;
             state[imageKey] = thumbnail;
-            if (isNew) state.newImgSource = null;
-            else state.editImgSource = null;
-            cropRow.style.display = 'none';
+            state[sourceKey] = null;
+            preview.classList.toggle('book-cover-preview', (isNew ? state.currentContentType : state.currentEditSection) === 'books');
             preview.src = thumbnail;
             preview.style.display = 'block';
+            cropRow.style.display = 'flex';
+
+            try {
+                const sourceImage = await loadCorsImage(thumbnail);
+                if (state[requestKey] !== requestId || state[thumbnailKey] !== thumbnail) return;
+                state[sourceKey] = sourceImage;
+                applyCrop(type);
+            } catch (error) {
+                if (state[requestKey] !== requestId || state[thumbnailKey] !== thumbnail) return;
+                console.error('[v0] Could not prepare YouTube thumbnail for cropping:', error);
+                state[sourceKey] = null;
+                state[imageKey] = thumbnail;
+                cropRow.style.display = 'none';
+            }
         }
 
         // Loads a remote image as a CORS-clean element. Instead of assigning the proxy URL
@@ -2449,6 +2508,12 @@
             render();
         }
 
+        function toggleOneShot(type) {
+            const prefix = type === 'new' ? 'item' : 'edit';
+            const oneShot = document.getElementById(`${prefix}IsOneShot`).checked;
+            document.getElementById(`${prefix}BookVolume`).disabled = oneShot;
+        }
+
         function switchContentType(type) {
             state.currentContentType = type;
             document.querySelectorAll('.nav-tab').forEach(el => {
@@ -2464,6 +2529,10 @@
             dom.seasonGroup.style.display = isSeries ? 'block' : 'none';
             dom.episodeGroup.style.display = isSeries ? 'block' : 'none';
             dom.openingsGroup.style.display = isSeries ? 'block' : 'none';
+            document.getElementById('bookVolumeGroup').style.display = isBook ? 'block' : 'none';
+            document.getElementById('bookOneShotGroup').style.display = isBook ? 'block' : 'none';
+            toggleOneShot('new');
+            if (state.newImgSource) applyCrop('new');
             dom.songGroup.style.display = type === 'movies' ? 'block' : 'none';
             document.getElementById('itemIsAnime').checked = false;
             document.getElementById('itemIsAnime').parentElement.style.display = isBook ? 'none' : 'inline-flex';
@@ -2605,7 +2674,10 @@
                 dateAdded: new Date().toISOString()
             };
 
-            if (state.currentContentType === 'movies') {
+            if (state.currentContentType === 'books') {
+                data.isOneShot = document.getElementById('itemIsOneShot').checked;
+                data.volume = data.isOneShot ? null : Math.max(1, parseInt(document.getElementById('itemBookVolume').value, 10) || 1);
+            } else if (state.currentContentType === 'movies') {
                 data.song = dom.itemSong.value.trim() || null;
             } else if (!isMovie) {
                 data.season = parseInt(dom.itemSeason.value) || 1;
@@ -2630,6 +2702,9 @@
                 dom.itemSubName.value = '';
                 dom.itemSeason.value = '1';
                 dom.itemEpisode.value = '1';
+                dom.itemBookVolume.value = '1';
+                dom.itemIsOneShot.checked = false;
+                dom.itemBookVolume.disabled = false;
                 dom.itemSong.value = '';
                 dom.itemExternalUrl.value = '';
                 dom.itemImage.value = '';
@@ -2712,15 +2787,19 @@
             dom.editName.value = item.name;
             dom.editSubName.value = item.subName || '';
             dom.editSeasonEpisode.style.display = isSeries ? 'grid' : 'none';
+            document.getElementById('editBookVolumeGroup').hidden = !isBook;
+            document.getElementById('editBookVolume').value = item.volume || 1;
+            document.getElementById('editIsOneShot').checked = Boolean(item.isOneShot);
+            toggleOneShot('edit');
             dom.editOpeningsGroup.style.display = isSeries ? 'block' : 'none';
             dom.editSongGroup.style.display = contentSection === 'movies' ? 'block' : 'none';
+            dom.editImagePreview.classList.toggle('book-cover-preview', isBook);
             document.getElementById('editAnimeOption').style.display = isBook ? 'none' : 'inline-flex';
             document.getElementById('editMangaOption').style.display = isBook ? 'inline-flex' : 'none';
             document.getElementById('editIsAnime').checked = Boolean(item.isAnime);
             document.getElementById('editIsManga').checked = Boolean(item.isManga);
             document.getElementById('editShortLinkGroup').style.display = contentSection === 'shorts' ? 'block' : 'none';
             document.getElementById('editExternalUrl').value = item.externalUrl || '';
-            if (contentSection === 'shorts') syncShortVideoThumbnail('edit');
 
             if (isSeries) {
                 dom.editSeason.value = item.season || 1;
@@ -2749,6 +2828,7 @@
             } else {
                 dom.editImagePreview.style.display = 'none';
             }
+            if (contentSection === 'shorts') syncShortVideoThumbnail('edit');
 
             dom.editModal.classList.add('active');
         }
@@ -2795,6 +2875,9 @@
                 data.season = parseInt(dom.editSeason.value) || 1;
                 data.episode = parseInt(dom.editEpisode.value) || 1;
                 data.openings = [...state.editOpenings];
+            } else if (state.currentEditSection === 'books') {
+                data.isOneShot = document.getElementById('editIsOneShot').checked;
+                data.volume = data.isOneShot ? null : Math.max(1, parseInt(document.getElementById('editBookVolume').value, 10) || 1);
             } else if (state.currentEditSection === 'movies') {
                 data.song = dom.editSong.value.trim() || null;
             }
@@ -3089,9 +3172,13 @@
                 const cats = (item.categories || []).map(c => `<span class="card-tag">${c}</span>`).join('');
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
                 const status = item.status || 'completed';
+                const isBook = item.contentSection === 'books';
+                const bookVolumeLabel = item.isOneShot ? 'Tomo único' : `Tomo ${Number(item.volume) || 1}`;
                 
                 let extra = '';
-                if (!isSeries && item.song) {
+                if (isBook) {
+                    extra = `<div class="card-extra">${bookVolumeLabel}</div>`;
+                } else if (!isSeries && item.song) {
                     extra = `<div class="card-extra"><strong>Canción:</strong> ${escapeHtml(item.song)}</div>`;
                 } else if (isSeries) {
                     const openings = item.openings?.length ? item.openings.map(o => `T${o}`).join(', ') : 'Sin favoritos';
@@ -3101,7 +3188,7 @@
                 return `
                     <div class="card">
                         ${getQuickStatusMenu(type, item.id, status)}
-                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image" loading="lazy" decoding="async">` : `<div class="card-placeholder">Sin imagen</div>`}
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="card-image ${isBook ? 'book-card-image' : ''}" loading="lazy" decoding="async">` : `<div class="card-placeholder ${isBook ? 'book-card-placeholder' : ''}">Sin imagen</div>`}
                         <div class="card-body">
                             <div class="card-badges"><span class="card-badge">${sectionNames[item.contentSection || (isSeries ? 'series' : 'movies')] || 'Elemento'}</span>${item.isAnime ? '<span class="card-badge">Anime</span>' : ''}${item.isManga ? '<span class="card-badge">Manga</span>' : ''}</div>
                             <h3 class="card-title">${getStatusDot(status)} ${escapeHtml(item.name)}</h3>
@@ -3133,14 +3220,17 @@
 
             const html = items.map(item => {
                 const stars = Array(5).fill(0).map((_, i) => `<span class="${i < item.rating ? '' : 'empty'}">&#9733;</span>`).join('');
+                const isBook = item.contentSection === 'books';
                 const meta = isSeries && item.season != null && item.episode != null
                     ? `T${item.season} - Ep. ${item.episode}`
-                    : (item.isAnime ? 'Anime' : item.isManga ? 'Manga' : item.contentSection === 'shorts' ? 'Corto' : item.contentSection === 'books' ? 'Libro' : (item.song || ''));
+                    : isBook
+                        ? (item.isOneShot ? 'Tomo único' : `Tomo ${Number(item.volume) || 1}`)
+                        : (item.isAnime ? 'Anime' : item.isManga ? 'Manga' : item.contentSection === 'shorts' ? 'Corto' : (item.song || ''));
                 const status = item.status || 'completed';
 
                 return `
                     <div class="list-item">
-                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="list-thumb">` : `<div class="list-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);">Sin img</div>`}
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="list-thumb ${isBook ? 'book-list-thumb' : ''}">` : `<div class="list-thumb ${isBook ? 'book-list-thumb' : ''}" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);">Sin img</div>`}
                         <div class="list-info">
                             <div class="list-title">
                                 <span class="list-status-dot ${status}"></span>
